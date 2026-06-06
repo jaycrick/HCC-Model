@@ -1,27 +1,77 @@
 # Init. ----------------------------
 load("Sensitivity_analyses.RData")
 
-pacman::p_load(expm, beepr, tidyverse, here, RColorBrewer, ggthemes, ggsci, gridExtra, scales, mc2d, magrittr, viridis)
+pacman::p_load(
+  expm,
+  beepr,
+  tidyverse,
+  here,
+  RColorBrewer,
+  ggthemes,
+  ggsci,
+  gridExtra,
+  scales,
+  mc2d,
+  magrittr,
+  viridis
+)
 detach("package:MASS", unload = TRUE)
 set.seed(4567385) # generated from random.org between 1 and 10000000
 
 my_pal <- pal_igv("default")(7)
-names(my_pal) <- c("Cirrhosis", "Mortality", "BCLC 0", "BCLC A", "BCLC D", "BCLC B", "BCLC C")
-my_linet <- as.vector(c("solid", "solid", "solid", "solid", "solid", "solid", "dotdash"))
+names(my_pal) <- c(
+  "Cirrhosis",
+  "Mortality",
+  "BCLC 0",
+  "BCLC A",
+  "BCLC D",
+  "BCLC B",
+  "BCLC C"
+)
+my_linet <- as.vector(c(
+  "solid",
+  "solid",
+  "solid",
+  "solid",
+  "solid",
+  "solid",
+  "dotdash"
+))
 names(my_linet) <- stage_list
 
-my_scale <- scale_colour_manual(name = "HCC_Stage", values = my_pal, limits = stage_list)
-my_fill <- scale_fill_manual(name = "HCC_Stage", values = my_pal, limits = stage_list)
-my_line <- scale_linetype_manual(name = "HCC_Stage", values = my_linet, limits = stage_list)
+my_scale <- scale_colour_manual(
+  name = "HCC_Stage",
+  values = my_pal,
+  limits = stage_list
+)
+my_fill <- scale_fill_manual(
+  name = "HCC_Stage",
+  values = my_pal,
+  limits = stage_list
+)
+my_line <- scale_linetype_manual(
+  name = "HCC_Stage",
+  values = my_linet,
+  limits = stage_list
+)
 
 turbo_pal <- turbo(7)
 names(turbo_pal) <- stage_list
-my_scale <- scale_colour_manual(name = "HCC_Stage", values = turbo_pal, limits = stage_list)
-my_fill <- scale_fill_manual(name = "HCC_Stage", values = turbo_pal, limits = stage_list)
+my_scale <- scale_colour_manual(
+  name = "HCC_Stage",
+  values = turbo_pal,
+  limits = stage_list
+)
+my_fill <- scale_fill_manual(
+  name = "HCC_Stage",
+  values = turbo_pal,
+  limits = stage_list
+)
 
 
 # Initialising some randomised variables ------------
-ran_vars <- function(x = 1, ignore = NULL) { # x = number of randomisations, with a fixed p_HCC
+ran_vars <- function(x = 1, ignore = NULL) {
+  # x = number of randomisations, with a fixed p_HCC
 
   rtbls <- vector("list", length = x)
 
@@ -30,7 +80,34 @@ ran_vars <- function(x = 1, ignore = NULL) { # x = number of randomisations, wit
       rowwise() %>%
       mutate(new = rpert(1, LOWER, POINT, UPPER)) %>%
       ungroup() %>%
-      bind_cols(Stage = c("p_HCC", "p_0", "p_A", "p_B", "p_C", "p_D", "Sens_0", "Sens_A", "Sens_B", "Sens_C", "Sens_D", "p_NA", "p_CA", "p_Att", "L_0", "L_A", "L_B", "L_C", "L_D", "Sym_0", "Sym_A", "Sym_B", "Sym_C", "Sym_D"))
+      bind_cols(
+        Stage = c(
+          "p_HCC",
+          "p_0",
+          "p_A",
+          "p_B",
+          "p_C",
+          "p_D",
+          "Sens_0",
+          "Sens_A",
+          "Sens_B",
+          "Sens_C",
+          "Sens_D",
+          "p_NA",
+          "p_CA",
+          "p_Att",
+          "L_0",
+          "L_A",
+          "L_B",
+          "L_C",
+          "L_D",
+          "Sym_0",
+          "Sym_A",
+          "Sym_B",
+          "Sym_C",
+          "Sym_D"
+        )
+      )
 
     rtbls[[i]] <- dfs(Parameter = rparam_tbl$Stage, value = rparam_tbl$new) %>%
       select(!all_of(ignore))
@@ -43,18 +120,27 @@ resampled_pars <- readRDS(file = "resampled_pars_fin.rds")
 
 # Setting parameters--------------
 
-risk_no_int <- function(n, y) { # Graphs no intervention over y years
+risk_no_int <- function(n, y) {
+  # Graphs no intervention over y years
   risk <- seq(0, 0.08, length.out = 1000)
 
   my_tbl <- map_dfr(risk, ~ fromf4(n = 100, t = y * 12, p_HCC = .x)) %>%
     tibble(`Annual HCC Risk Profile` = risk, .) %>%
-    pivot_longer(c(Cirrhosis:Mortality), names_to = "HCC_stage", values_to = "percent") %>%
+    pivot_longer(
+      c(Cirrhosis:Mortality),
+      names_to = "HCC_stage",
+      values_to = "percent"
+    ) %>%
     mutate(
       HCC_stage = factor(HCC_stage, levels = stage_list),
-      graph_location = factor(ifelse(HCC_stage %in% c("Cirrhosis", "Mortality"), "top", "bottom"), levels = c("top", "bottom"))
+      graph_location = factor(
+        ifelse(HCC_stage %in% c("Cirrhosis", "Mortality"), "top", "bottom"),
+        levels = c("top", "bottom")
+      )
     )
 
-  my_plot <- ggplot( # setting up aes etc.
+  my_plot <- ggplot(
+    # setting up aes etc.
     my_tbl,
     aes(
       x = `Annual HCC Risk Profile`,
@@ -91,11 +177,23 @@ risk_no_int <- function(n, y) { # Graphs no intervention over y years
     labs(
       x = "Annual HCC Risk Profile",
       y = "Percentage of Population per Stage",
-      title = paste("Model-estimated Distribution of BCLC\nStages From Untreated HCC After", y, "Years"),
+      title = paste(
+        "Model-estimated Distribution of BCLC\nStages From Untreated HCC After",
+        y,
+        "Years"
+      ),
       caption = "With the assumption no-one has\nHCC at the start of the model"
     )
 
-  ggsave(filename = here("Figures", paste0("Untreated_HCp_Cistribution_by_Risk_", y, "_Year.jpg")), plot = my_plot, width = 5.5, height = 6)
+  ggsave(
+    filename = here(
+      "Figures",
+      paste0("Untreated_HCp_Cistribution_by_Risk_", y, "_Year.jpg")
+    ),
+    plot = my_plot,
+    width = 5.5,
+    height = 6
+  )
 
   return(my_plot)
 }
@@ -106,7 +204,6 @@ plot_untreated_risk_10_years <- risk_no_int(100, 10)
 
 # plot_untreated_risk_5_years <- risk_no_int(100, 5)
 
-
 # GRAPHING PROGRESSION OVER MULTIPLE MONTHS ---------------------------------
 
 years_no_int <- function(y) {
@@ -114,13 +211,21 @@ years_no_int <- function(y) {
 
   my_tbl <- map_dfr(months, ~ fromf4(n = 100, t = .x)) %>%
     tibble(Years = months / 12, .) %>%
-    pivot_longer(c(Cirrhosis:Mortality), names_to = "HCC_stage", values_to = "percent") %>%
+    pivot_longer(
+      c(Cirrhosis:Mortality),
+      names_to = "HCC_stage",
+      values_to = "percent"
+    ) %>%
     mutate(
       HCC_stage = factor(HCC_stage, levels = stage_list),
-      graph_location = factor(ifelse(HCC_stage %in% c("Cirrhosis", "Mortality"), "top", "bottom"), levels = c("top", "bottom"))
+      graph_location = factor(
+        ifelse(HCC_stage %in% c("Cirrhosis", "Mortality"), "top", "bottom"),
+        levels = c("top", "bottom")
+      )
     )
 
-  my_plot <- ggplot( # setting up aes etc.
+  my_plot <- ggplot(
+    # setting up aes etc.
     my_tbl,
     aes(
       x = Years,
@@ -157,11 +262,27 @@ years_no_int <- function(y) {
     labs(
       x = "Years Since Model Start",
       y = "Percentage of Population per Stage",
-      title = paste("Model-estimated Distribution of BCLC\nStages from Untreated HCC Over", y, "Years"),
-      caption = paste("With the assumption no-one has\nHCC at the start of the model and a", p_HCC_def, "annual HCC risk")
+      title = paste(
+        "Model-estimated Distribution of BCLC\nStages from Untreated HCC Over",
+        y,
+        "Years"
+      ),
+      caption = paste(
+        "With the assumption no-one has\nHCC at the start of the model and a",
+        p_HCC_def,
+        "annual HCC risk"
+      )
     )
 
-  ggsave(filename = here("Figures", paste0("Untreated_HCC_over_time_", y, "_Year.jpg")), plot = my_plot, width = 5.5, height = 6)
+  ggsave(
+    filename = here(
+      "Figures",
+      paste0("Untreated_HCC_over_time_", y, "_Year.jpg")
+    ),
+    plot = my_plot,
+    width = 5.5,
+    height = 6
+  )
 
   return(my_plot)
 }
@@ -197,7 +318,11 @@ usfreq_graph <- function(y) {
       expand = expansion(0)
     ) +
     labs(
-      title = paste("Effect of Ultrasound Screening Frequency\non Life Years over", y, "Years"),
+      title = paste(
+        "Effect of Ultrasound Screening Frequency\non Life Years over",
+        y,
+        "Years"
+      ),
       y = "Additional Life Years Gained From\nIntervention per Cohort of 100",
       fill = "Confidence\nBound"
     ) +
@@ -218,9 +343,28 @@ usfreq_graph <- function(y) {
       expand = expansion(0)
     )
 
-
-  ggsave(filename = here("Figures", paste0("HCC_Years_of_Life_Saved_by_Testing_Frequency_", y, "_Year.jpg")), plot = yat, width = 5.5, height = 6)
-  ggsave(filename = here("Figures", paste0("HCC_Years_of_Life_Saved_by_Testing_Frequency_", y, "_log_Year.jpg")), plot = yat_log, width = 5.5, height = 6)
+  ggsave(
+    filename = here(
+      "Figures",
+      paste0("HCC_Years_of_Life_Saved_by_Testing_Frequency_", y, "_Year.jpg")
+    ),
+    plot = yat,
+    width = 5.5,
+    height = 6
+  )
+  ggsave(
+    filename = here(
+      "Figures",
+      paste0(
+        "HCC_Years_of_Life_Saved_by_Testing_Frequency_",
+        y,
+        "_log_Year.jpg"
+      )
+    ),
+    plot = yat_log,
+    width = 5.5,
+    height = 6
+  )
 
   return(yat)
 }
@@ -228,12 +372,12 @@ usfreq_graph <- function(y) {
 plot_usfreq_10_years <- usfreq_graph(10)
 # plot_usfreq_20_years <- usfreq_graph(20)
 
-
 # GRAPHS BY LIKELIHOOD OF ATTENDED IF IN PA -----------
 
 pafunc <- function(y) {
   probs <- seq(0, 1 - p_NA_def, length.out = 50)
-  tempfun <- function(p) pmap_dbl(resampled_pars, p_CA = p, t = y * 12, life_add)
+  tempfun <- function(p)
+    pmap_dbl(resampled_pars, p_CA = p, t = y * 12, life_add)
   testyll <- map_dbl(probs, ~ life_add(p_CA = .x, t = y * 12))
   rand_list <- map(probs, tempfun)
   saveddf <- tibble(probs, testyll, rand_list) %>%
@@ -252,7 +396,11 @@ pafunc <- function(y) {
     ) +
     scale_fill_manual(values = "black") +
     labs(
-      title = paste("Effect of Complete Adherence\non Life Years over", y, "Years"),
+      title = paste(
+        "Effect of Complete Adherence\non Life Years over",
+        y,
+        "Years"
+      ),
       x = "Population in Completely Adherent Cohort",
       y = "Additional Life Years Gained From\nIntervention per Cohort of 100",
       caption = "People are taken from the partially\nadherent cohort, whilst the non-adherent\ncohort is assumed to be stationary",
@@ -266,7 +414,15 @@ pafunc <- function(y) {
       expand = expansion(0)
     )
 
-  ggsave(filename = here("Figures", paste0("HCC_Years_of_Life_Saved_by_p_CA_", y, "_Year.jpg")), plot = yatpa, width = 5.5, height = 9)
+  ggsave(
+    filename = here(
+      "Figures",
+      paste0("HCC_Years_of_Life_Saved_by_p_CA_", y, "_Year.jpg")
+    ),
+    plot = yatpa,
+    width = 5.5,
+    height = 9
+  )
 
   return(yatpa)
 }
@@ -274,7 +430,6 @@ pafunc <- function(y) {
 # plot_partial_adherence_5_years <- pafunc(5)
 plot_partial_adherence_10_years <- pafunc(10)
 # plot_partial_adherence_20_years <- pafunc(20)
-
 
 # Randomising some values and generating a range ----------------------------------------------------
 
@@ -290,13 +445,19 @@ plot_sim <- ggplot(life_tbl, aes(x = version, y = years_saved)) +
   geom_boxplot() +
   theme_bw(base_family = "serif")
 
-ggsave(here("Figures", "simulation_range.jpg"), plot_sim, width = 5.5, height = 9)
+ggsave(
+  here("Figures", "simulation_range.jpg"),
+  plot_sim,
+  width = 5.5,
+  height = 9
+)
 
 
 # Varying US Attendance for partial adh -----------
 
 p_Att <- (0:20) / 20
-tempfun <- function(p) pmap_dbl(resampled_pars, p_NA = 0, p_CA = 0, p_Att = p, life_add)
+tempfun <- function(p)
+  pmap_dbl(resampled_pars, p_NA = 0, p_CA = 0, p_Att = p, life_add)
 testyll <- map_dbl(p_Att, ~ life_add(p_Att = .x, p_NA = 0, p_CA = 0))
 rand_list <- map(p_Att, tempfun)
 saveddf <- tibble(p_Att, testyll, rand_list) %>%
@@ -332,15 +493,39 @@ plot_att <- ggplot(saveddf, aes(p_Att, testyll)) +
 
 plot_att
 
-ggsave(here("Figures", "attendance_plot_10_year.jpg"), plot_att, width = 6, height = 5.5)
-ggsave(here("Figures", "attendance_plot_10_year.png"), plot_att, width = 6, height = 5.5, dpi = 600)
-ggsave(here("Figures", "attendance_plot_10_year.pdf"), plot_att, width = 6, height = 5.5, dpi = 600)
+ggsave(
+  here("Figures", "attendance_plot_10_year.jpg"),
+  plot_att,
+  width = 6,
+  height = 5.5
+)
+ggsave(
+  here("Figures", "attendance_plot_10_year.png"),
+  plot_att,
+  width = 6,
+  height = 5.5,
+  dpi = 600
+)
+ggsave(
+  here("Figures", "attendance_plot_10_year.pdf"),
+  plot_att,
+  width = 6,
+  height = 5.5,
+  dpi = 600
+)
 
 
 p_Att_Stages <- function(y) {
   p_Att <- (0:20) / 20
-  tempfun <- function(p) map_df(resampled_pars, ~ pmap_df(.x, p_NA = 0, p_CA = 0, p_Att = p, t = y * 12, adh_theor))
-  number <- map_df(p_Att, ~ adh_theor(p_Att = .x, p_NA = 0, p_CA = 0, t = y * 12)) %>%
+  tempfun <- function(p)
+    map_df(
+      resampled_pars,
+      ~ pmap_df(.x, p_NA = 0, p_CA = 0, p_Att = p, t = y * 12, adh_theor)
+    )
+  number <- map_df(
+    p_Att,
+    ~ adh_theor(p_Att = .x, p_NA = 0, p_CA = 0, t = y * 12)
+  ) %>%
     select(-c(Cirrhosis, Mortality)) %>%
     pivot_longer(`BCLC 0`:`BCLC D`, values_to = "number") %>%
     select(number)
@@ -355,10 +540,22 @@ p_Att_Stages <- function(y) {
     ) %>%
     tibble(., number)
 
-  plot_att_stages <- ggplot(saveddf, aes(p_Att, number, group = HCC_Stage, colour = HCC_Stage, linetype = HCC_Stage, fill = HCC_Stage)) +
+  plot_att_stages <- ggplot(
+    saveddf,
+    aes(
+      p_Att,
+      number,
+      group = HCC_Stage,
+      colour = HCC_Stage,
+      linetype = HCC_Stage,
+      fill = HCC_Stage
+    )
+  ) +
     geom_line(size = 1.5) +
     theme_bw(base_family = "serif") +
-    ggtitle("Effect of Screening Attendance within the\nPartial Adherence Cohort on Diagnosis of HCC") +
+    ggtitle(
+      "Effect of Screening Attendance within the\nPartial Adherence Cohort on Diagnosis of HCC"
+    ) +
     scale_x_continuous(
       labels = label_percent(),
       expand = expansion(0)
@@ -376,13 +573,29 @@ p_Att_Stages <- function(y) {
       y = "Number Diagnosed by Stage"
     )
 
-  ggsave(here("Figures", paste0("attendance_plot_stages_", y, "_year.jpg")), plot_att_stages, width = 5, height = 8)
+  ggsave(
+    here("Figures", paste0("attendance_plot_stages_", y, "_year.jpg")),
+    plot_att_stages,
+    width = 5,
+    height = 8
+  )
 
-
-  plot_att_stages_ribbon <- ggplot(saveddf, aes(p_Att, number, group = HCC_Stage, colour = HCC_Stage, linetype = HCC_Stage, fill = HCC_Stage)) +
+  plot_att_stages_ribbon <- ggplot(
+    saveddf,
+    aes(
+      p_Att,
+      number,
+      group = HCC_Stage,
+      colour = HCC_Stage,
+      linetype = HCC_Stage,
+      fill = HCC_Stage
+    )
+  ) +
     geom_line(size = 1.5) +
     theme_bw(base_family = "serif") +
-    ggtitle("Effect of Screening Attendance\non Stage of Diagnosis within\nthe Partial Adherence Cohort") +
+    ggtitle(
+      "Effect of Screening Attendance\non Stage of Diagnosis within\nthe Partial Adherence Cohort"
+    ) +
     scale_x_continuous(
       labels = label_percent(),
       expand = expansion(0)
@@ -402,7 +615,12 @@ p_Att_Stages <- function(y) {
       y = "Number Diagnosed by Stage"
     )
 
-  ggsave(here("Figures", paste0("attendance_plot_stages_ribbon_", y, "_year.jpg")), plot_att_stages_ribbon, width = 5, height = 8)
+  ggsave(
+    here("Figures", paste0("attendance_plot_stages_ribbon_", y, "_year.jpg")),
+    plot_att_stages_ribbon,
+    width = 5,
+    height = 8
+  )
 
   return(plot_att_stages)
 }
@@ -416,13 +634,15 @@ all_objects_in_workspace <- data.frame(list = ls())
 plotList <- all_objects_in_workspace %>%
   filter(str_detect(list, "plot"))
 
-save(list=plotList$list, file="plots.RData")
+save(list = plotList$list, file = "plots.RData")
 
 # SIMULATION----
 
-hccsim <- function(n, m) { # n=number of people, m=number of months
+hccsim <- function(n, m) {
+  # n=number of people, m=number of months
   vec <- c(n, rep(0, 6)) # initialise the vector, with all people in F4
-  for (i in 1:m) { # for each month
+  for (i in 1:m) {
+    # for each month
     for (j in (length(vec) - 1):1) {
       worse <- rbinom(1, vec[j], tmat[j, j + 1]) # the number of people who progress
       vec[j + 1] <- vec[j + 1] + worse
@@ -440,10 +660,12 @@ simcomp <- function(n, l, s) hccsim(n, l) - hccsim(n, s) # compares testing incr
 
 # Now with ultrasound----------------------------
 
-us_sim <- function(n, t, m) { # n=number of people, t=total time in months, m=number of months checkup
+us_sim <- function(n, t, m) {
+  # n=number of people, t=total time in months, m=number of months checkup
   vec <- c(n, rep(0, 6)) # initialise the vector, with all people in F4
   fin <- rep(0, 7)
-  for (i in 1:t) { # for each month
+  for (i in 1:t) {
+    # for each month
     for (j in (length(vec) - 1):1) {
       worse <- rbinom(1, vec[j], tmat[j, j + 1]) # the number of people who progress
       vec[j + 1] <- vec[j + 1] + worse
@@ -482,7 +704,8 @@ us_sim(13000, 6, 6)
 
 # WITH ADHERRENCE GROUPS -------------------------
 
-us_sim_pa <- function(n, t, m) { # now just for the pa group, same as us_sim except for comments
+us_sim_pa <- function(n, t, m) {
+  # now just for the pa group, same as us_sim except for comments
   vec <- c(n, rep(0, 6))
   fin <- rep(0, 7)
   for (i in 1:t) {
@@ -528,7 +751,8 @@ us_sim_pa <- function(n, t, m) { # now just for the pa group, same as us_sim exc
   return(fin)
 }
 
-adh_sim <- function(n, t, m) { # number of people, total time tracking, interval of US
+adh_sim <- function(n, t, m) {
+  # number of people, total time tracking, interval of US
   adh_group <- rmultinom(1, n, c(pr_na, pr_pa, 1 - pr_na - pr_pa)) # number of people in each adherence group
   stage_caught <- us_sim(adh_group[3], t, m) + us_sim_pa(adh_group[2], t, m)
   stage_caught[7] <- stage_caught[7] + adh_group[1]
@@ -536,4 +760,3 @@ adh_sim <- function(n, t, m) { # number of people, total time tracking, interval
 }
 
 adh_sim(13000, 60, 6)
-
