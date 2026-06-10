@@ -32,7 +32,7 @@ source(here::here("R", "setup.R"))
 source(here::here("R", "model_core.R"))
 source(here::here("R", "bootstrap.R"))
 
-library(hypogeom)   # GitHub: damian-t-p/hypogeom  (see README for install)
+library(hypogeom)   # Written for this project by D. Pavlyshyn; see README for install
 library(parallel)
 library(DescTools)
 library(corrplot)

@@ -1,13 +1,18 @@
 # HCC Surveillance Markov Model
 
-Code for the HCC surveillance model described in: **[TODO: add full citation and DOI]**
+Code for the model described in:
 
-This repository contains an R implementation of a Markov model for hepatocellular
-carcinoma (HCC) surveillance in cirrhotic patients. The model tracks cohorts through
-BCLC disease stages (0, A, B, C, D) and death, incorporating ultrasound screening
-sensitivity, patient adherence (non-, partial, and completely adherent groups), and
-stage-specific treatment outcomes. It estimates life-years gained under various
-surveillance-improvement scenarios relative to a current-practice baseline.
+> Cumming J, Scott N, Howell J, Flores JE, Pavlyshyn D, Hellard ME, Winata LS, Ryan M, Sutherland T, Thompson AJ, Doyle JS, Sacks-Davis R.
+> **Improving Hepatocellular Carcinoma Surveillance Outcomes in Patients with Cirrhosis after Hepatitis C Cure: A Modelling Study.**
+> *Cancers* 2024, **16**(15), 2745. https://doi.org/10.3390/cancers16152745
+
+This repository contains an R implementation of a deterministic compartmental Markov
+model for hepatocellular carcinoma (HCC) surveillance in patients with cirrhosis after
+hepatitis C cure. The model tracks cohorts through BCLC disease stages (0, A, B, C, D)
+and death, incorporating ultrasound screening sensitivity, patient adherence (non-,
+partial, and completely adherent groups), and stage-specific treatment outcomes to
+estimate life-years gained under various surveillance-improvement scenarios relative to
+a current-practice baseline over a 10-year horizon.
 
 ---
 
@@ -29,8 +34,12 @@ git lfs install
 renv::restore()
 ```
 
-This installs all packages at the exact versions recorded in `renv.lock`, including
-`hypogeom` which is sourced from GitHub (`damian-t-p/hypogeom`).
+This installs all packages at the exact versions recorded in `renv.lock`.
+
+> **Note on `hypogeom`:** This package was written specifically for this project by
+> co-author Damian Pavlyshyn and is only available from GitHub
+> (`damian-t-p/hypogeom`). `renv::restore()` will install it automatically. If you
+> need to install it manually: `remotes::install_github("damian-t-p/hypogeom")`.
 
 ---
 
@@ -116,8 +125,8 @@ Rscript run_all.R --bootstrap
 
 These values should be reproduced exactly from a clean run:
 
-- `life_add()` (baseline, default parameters) ≈ **66.4987** life years per cohort of 100
-- `life_add(p_NA = 1, p_CA = 0)` (no surveillance) ≈ **14.19459** life years
+- `life_add()` (baseline, default parameters) ≈ **68.02326** life years per cohort of 100
+- `life_add(p_NA = 1, p_CA = 0)` (no surveillance) ≈ **14.85677** life years
 
 Both are asserted via `stopifnot` in `04_clinical_scenarios.R`.
 
@@ -125,15 +134,26 @@ Both are asserted via `stopifnot` in `04_clinical_scenarios.R`.
 
 ## Citation
 
-Please cite the associated manuscript (DOI: TODO) and this software repository:
+Please cite the associated manuscript:
 
-```
-@software{hcc_model,
-  title  = {HCC Surveillance Markov Model},
-  author = {[TODO]},
-  year   = {2024},
-  url    = {https://github.com/TODO/HCC-Model},
-  doi    = {TODO}
+```bibtex
+@Article{cancers16152745,
+  author   = {Cumming, Jacob and Scott, Nick and Howell, Jessica and
+              Flores, Joan Ericka and Pavlyshyn, Damian and
+              Hellard, Margaret E. and Winata, Leon Shin-han and
+              Ryan, Marno and Sutherland, Tom and Thompson, Alexander J. and
+              Doyle, Joseph S. and Sacks-Davis, Rachel},
+  title    = {Improving Hepatocellular Carcinoma Surveillance Outcomes in
+              Patients with Cirrhosis after Hepatitis C Cure: A Modelling Study},
+  journal  = {Cancers},
+  volume   = {16},
+  year     = {2024},
+  number   = {15},
+  article-number = {2745},
+  url      = {https://www.mdpi.com/2072-6694/16/15/2745},
+  doi      = {10.3390/cancers16152745},
+  pmid     = {39123472},
+  issn     = {2072-6694},
 }
 ```
 

@@ -1,23 +1,87 @@
 cff-version: 1.2.0
-message: "If you use this software, please cite it as below."
+message: "If you use this software, please cite the associated article below."
 type: software
 title: "HCC Surveillance Markov Model"
 abstract: >
   R code implementing a Markov model for hepatocellular carcinoma (HCC)
-  surveillance in cirrhotic patients. Models BCLC-stage progression,
-  ultrasound sensitivity, patient adherence, and treatment outcomes to
-  estimate life-years gained under various surveillance strategies.
+  surveillance in patients with cirrhosis after hepatitis C cure. Models
+  BCLC-stage progression, ultrasound sensitivity, patient adherence, and
+  treatment outcomes to estimate life-years gained under various surveillance
+  strategies.
 authors:
-  - family-names: "Mac"        # TODO: replace with full author list
-    given-names: "J"
-    # orcid: "https://orcid.org/XXXX-XXXX-XXXX-XXXX"
-date-released: "2024-01-01"    # TODO: replace with actual publication date
+  - family-names: Cumming
+    given-names: Jacob
+  - family-names: Scott
+    given-names: Nick
+  - family-names: Howell
+    given-names: Jessica
+  - family-names: Flores
+    given-names: Joan Ericka
+  - family-names: Pavlyshyn
+    given-names: Damian
+  - family-names: Hellard
+    given-names: Margaret E.
+  - family-names: Winata
+    given-names: Leon Shin-han
+  - family-names: Ryan
+    given-names: Marno
+  - family-names: Sutherland
+    given-names: Tom
+  - family-names: Thompson
+    given-names: Alexander J.
+  - family-names: Doyle
+    given-names: Joseph S.
+  - family-names: Sacks-Davis
+    given-names: Rachel
+date-released: "2024-07-01"
 license: MIT
-repository-code: "https://github.com/TODO/HCC-Model"  # TODO: update URL
-doi: "TODO"   # TODO: add DOI once available
+repository-code: "https://github.com/TODO/HCC-Model"
+doi: 10.3390/cancers16152745
+url: "https://www.mdpi.com/2072-6694/16/15/2745"
 keywords:
   - hepatocellular carcinoma
   - Markov model
-  - surveillance
+  - HCC surveillance
   - health economics
   - BCLC staging
+  - hepatitis C
+  - cirrhosis
+preferred-citation:
+  type: article
+  authors:
+    - family-names: Cumming
+      given-names: Jacob
+    - family-names: Scott
+      given-names: Nick
+    - family-names: Howell
+      given-names: Jessica
+    - family-names: Flores
+      given-names: Joan Ericka
+    - family-names: Pavlyshyn
+      given-names: Damian
+    - family-names: Hellard
+      given-names: Margaret E.
+    - family-names: Winata
+      given-names: Leon Shin-han
+    - family-names: Ryan
+      given-names: Marno
+    - family-names: Sutherland
+      given-names: Tom
+    - family-names: Thompson
+      given-names: Alexander J.
+    - family-names: Doyle
+      given-names: Joseph S.
+    - family-names: Sacks-Davis
+      given-names: Rachel
+  title: >
+    Improving Hepatocellular Carcinoma Surveillance Outcomes in Patients
+    with Cirrhosis after Hepatitis C Cure: A Modelling Study
+  journal: Cancers
+  volume: 16
+  number: 15
+  article-number: "2745"
+  year: 2024
+  doi: 10.3390/cancers16152745
+  url: "https://www.mdpi.com/2072-6694/16/15/2745"
+  pmid: "39123472"
+  issn: "2072-6694"
