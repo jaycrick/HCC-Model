@@ -1,0 +1,29 @@
+#!/bin/sh
+# Enforce gitmoji-style commit messages: :<emoji>: <description>
+# Matches both gitmoji (:fire:) and Unicode emoji (🔥) prefixes.
+
+msg=$(cat "$1")
+
+# Allow merge commits and fixup commits through without validation
+case "$msg" in
+  Merge*|fixup!*|squash!*) exit 0 ;;
+esac
+
+# Check for gitmoji colon syntax (:fire:, :bug:, etc.)
+# or a leading Unicode emoji (multi-byte sequences starting 0xE2–0xEF or 0xF0)
+first_char=$(printf '%s' "$msg" | cut -c1)
+first_byte=$(printf '%s' "$msg" | head -c1 | od -An -tx1 | tr -d ' \n')
+
+if echo "$msg" | grep -qE '^:[a-z_]+:'; then
+  exit 0
+fi
+
+case "$first_byte" in
+  e[2-9a-f]|f0) exit 0 ;;
+esac
+
+echo "COMMIT REJECTED: commit message must start with a gitmoji." >&2
+echo "  Examples:  :bug: fix regression in bootstrap sampling" >&2
+echo "             :sparkles: add sensitivity analysis for BCLC stage" >&2
+echo "  Reference: https://gitmoji.dev" >&2
+exit 1

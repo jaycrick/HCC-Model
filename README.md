@@ -16,6 +16,19 @@ a current-practice baseline over a 10-year horizon.
 
 ---
 
+## Quick start
+
+```bash
+git clone https://github.com/jaycrick/HCC-Model.git && cd HCC-Model
+git lfs pull                          # download pre-computed bootstrap data
+Rscript -e 'renv::restore()'         # install packages at locked versions
+Rscript run_all.R                     # reproduce all figures → figures/
+```
+
+Open `MODEL.Rproj` in RStudio or Positron to work interactively.
+
+---
+
 ## Requirements
 
 - **R** ≥ 4.2 (version used: see `renv.lock`)
@@ -75,15 +88,7 @@ This installs all packages at the exact versions recorded in `renv.lock`.
 
 ## How to reproduce the figures
 
-```bash
-git clone <repo-url>
-cd HCC-Model
-git lfs pull            # download data-derived/ files
-Rscript -e 'renv::restore()'
-Rscript run_all.R
-```
-
-All figures are written to `figures/`.
+Run `Rscript run_all.R` from the project root (see [Quick start](#quick-start)). All figures are written to `figures/`.
 
 ### Run order
 
@@ -104,6 +109,44 @@ regenerate them (requires substantial compute; originally run on an HPC cluster)
 ```bash
 Rscript run_all.R --bootstrap
 ```
+
+---
+
+## Interactive use
+
+To explore or modify the model outside the pipeline, source the two core files and call functions directly:
+
+```r
+source("R/setup.R")      # loads packages, reads Parameters.csv, sets *_def globals
+source("R/model_core.R") # defines fromf4(), us_theor_pa(), adh_theor(), life_add()
+
+# Life-years gained under default parameters (current practice)
+life_add()
+#> [1] 68.02326
+
+# No surveillance counterfactual
+life_add(p_NA = 1, p_CA = 0)
+#> [1] 14.85677
+
+# What if ultrasound interval shortened to 3 months?
+life_add(m = 3)
+
+# What if complete adherence increases from default to 50%?
+life_add(p_CA = 0.5)
+```
+
+`life_add()` accepts any combination of the model's ~25 parameters as named arguments;
+all default to the `*_def` point estimates read from `data/Parameters.csv`.
+
+Key functions:
+
+| Function | Purpose |
+|----------|---------|
+| `fromf4(n, t, ...)` | Markov progression for `n` people over `t` months |
+| `us_theor_pa(n, t, m, Pr_Att, ...)` | Ultrasound detection for a single adherence group |
+| `adh_theor(n, t, m, p_NA, p_CA, p_Att, ...)` | Detection across all three adherence groups |
+| `life_add(...)` | Total life-years gained; wraps `adh_theor` |
+| `life_tibble(csv)` | Builds parameter sweep tibble for sensitivity tornado plots |
 
 ---
 
@@ -129,6 +172,30 @@ These values should be reproduced exactly from a clean run:
 - `life_add(p_NA = 1, p_CA = 0)` (no surveillance) ≈ **14.85677** life years
 
 Both are asserted via `stopifnot` in `04_clinical_scenarios.R`.
+
+---
+
+## Contributing
+
+### First-time setup
+
+After cloning, activate the versioned git hooks and install the [air](https://github.com/posit-dev/air) R formatter:
+
+```bash
+git config core.hooksPath .githooks
+
+# Install air (if not already present)
+curl -fsSL https://github.com/posit-dev/air/releases/latest/download/air-installer.sh | sh
+```
+
+### What the hooks enforce
+
+| Hook | What it does |
+|------|-------------|
+| `pre-commit` | Runs `air format` on staged `.R` files and re-stages them automatically |
+| `commit-msg` | Requires a [gitmoji](https://gitmoji.dev) prefix (e.g. `:bug:`, `:sparkles:`) |
+
+Format any file manually with `air format <file.R>`, or format the whole project with `air format .`.
 
 ---
 

@@ -1,0 +1,29 @@
+#!/bin/sh
+# Format staged R files with air and re-stage them.
+
+if ! command -v air >/dev/null 2>&1; then
+  echo "WARNING: air not found — skipping R format check." >&2
+  echo "Install with: curl -fsSL https://github.com/posit-dev/air/releases/latest/download/air-installer.sh | sh" >&2
+  exit 0
+fi
+
+# Collect staged .R files that are added/modified (not deleted)
+staged=$(git diff --cached --name-only --diff-filter=ACM | grep '\.R$')
+
+if [ -z "$staged" ]; then
+  exit 0
+fi
+
+# Format each file and re-stage
+changed=0
+for file in $staged; do
+  air format "$file"
+  git add "$file"
+  changed=1
+done
+
+if [ "$changed" -eq 1 ]; then
+  echo "air: formatted staged R files and re-staged." >&2
+fi
+
+exit 0
