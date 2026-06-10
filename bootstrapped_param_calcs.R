@@ -1,5 +1,3 @@
-# install.packages("pacman")
-
 library(cli)
 # devtools::install_github("damian-t-p/hypogeom")
 
@@ -219,7 +217,13 @@ set.seed(314)
 #   sam_a <- 4 + rhypogeom(101, hypo_probs[2:5])
 #   sam_0 <- 5 + rhypogeom(11, hypo_probs[1:5]) # should be 12
 #
-#   sam_meds <- c(median(sam_0), median(sam_a), median(sam_b), median(sam_c), median(sam_d))
+#   sam_meds <- c(
+#     median(sam_0),
+#     median(sam_a),
+#     median(sam_b),
+#     median(sam_c),
+#     median(sam_d)
+#   )
 #
 #   Dx_0 <- rbinom(1, 109, 36 / 109)
 #   Dx_A <- rbinom(1, 109 - Dx_0, 51 / 73)
@@ -230,12 +234,34 @@ set.seed(314)
 
 # n.cores <- detectCores()
 # clust <- makeCluster(n.cores)
-# clusterExport(clust, c("list_of_resampled", "init_hypo_probs", "neg_log_lik", "%^%", "dOrder", "dhypogeom", "phypogeom"))
+# clusterExport(
+#   clust,
+#   c(
+#     "list_of_resampled",
+#     "init_hypo_probs",
+#     "neg_log_lik",
+#     "%^%",
+#     "dOrder",
+#     "dhypogeom",
+#     "phypogeom"
+#   )
+# )
 #
 # list_of_pars <- parLapply(clust, list_of_resampled, function(lor) {
-#   optim(init_hypo_probs, function(x) {
-#     neg_log_lik(x, meds = lor[1:5], Dx_0 = lor[6], Dx_A = lor[7], Dx_sym_early = lor[8])
-#   }, method = "Nelder-Mead", control = list(maxit = 10000))
+#   optim(
+#     init_hypo_probs,
+#     function(x) {
+#       neg_log_lik(
+#         x,
+#         meds = lor[1:5],
+#         Dx_0 = lor[6],
+#         Dx_A = lor[7],
+#         Dx_sym_early = lor[8]
+#       )
+#     },
+#     method = "Nelder-Mead",
+#     control = list(maxit = 10000)
+#   )
 # })
 # stopCluster(clust)
 

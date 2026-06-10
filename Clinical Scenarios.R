@@ -1,7 +1,11 @@
 # Init. ----------------------------
-load("Sensitivity_analyses.RData")
+source(here("Sensitivity_analyses.R"))
 
-pacman::p_load(tidyverse, viridis, here, scales)
+library(conflicted)
+library(tidyverse)
+library(viridis)
+library(here)
+library(scales)
 
 # Baseline no USs at all
 

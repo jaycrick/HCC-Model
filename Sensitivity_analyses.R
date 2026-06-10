@@ -1,12 +1,13 @@
 # Initialise ----------------------------
+library(conflicted)
 library(expm)
 library(tidyverse)
 library(here)
 library(viridis)
 library(latex2exp)
 library(dplyr)
-# detach("package:MASS", unload = TRUE)
-set.seed(4567385) # generated from random.org between 1 and 10000000
+
+set.seed(4567385)
 
 stage_list <- c(
   "Cirrhosis",
@@ -442,7 +443,7 @@ plot_univariate <- ggplot(
         levels = c("Pr", "Sens", "L", "p", "Sym")
       )
     ) %>%
-    filter(years_mid_comp != 0),
+    dplyr::filter(years_mid_comp != 0),
   aes(
     y = Parameter,
     x = years_mid_comp,
@@ -496,7 +497,7 @@ plot_upper <- ggplot(
         str_detect(Parameter, "US") ~ "US"
       ))
     ) %>%
-    filter(years_high_comp != 0, Parameter != "p_HCC"),
+    dplyr::filter(years_high_comp != 0, Parameter != "p_HCC"),
   aes(
     y = Parameter,
     x = years_mid_comp,
@@ -537,7 +538,7 @@ plot_lower <- ggplot(
     mutate(
       Parameter = fct_reorder(.f = Parameter, .x = years_low_comp, abssum)
     ) %>%
-    filter(years_low_comp != 0, Parameter != "p_HCC"),
+    dplyr::filter(years_low_comp != 0, Parameter != "p_HCC"),
   aes(
     y = Parameter,
     x = years_low_comp,
@@ -581,7 +582,7 @@ facet_sens <- ggplot(
         levels = c("Pr", "Sens", "L", "p", "Sym")
       )
     ) %>%
-    filter(years_low_comp != 0, Parameter != "p_HCC") %>%
+    dplyr::filter(years_low_comp != 0, Parameter != "p_HCC") %>%
     select(c(
       "Parameter",
       "Bound",
@@ -638,7 +639,7 @@ ggsave(
 param_tbl_25 <- life_tibble("Parameters_25.csv")
 
 param_chang_tbl <- param_tbl_25 %>%
-  filter(
+  dplyr::filter(
     years_mid_comp != 0,
     !Parameter %in%
       c(
@@ -778,7 +779,7 @@ ggsave(
 
 plot_upper_25 <- ggplot(
   data = param_tbl_25 %>%
-    filter(
+    dplyr::filter(
       years_high_comp != 0,
       !Parameter %in%
         c(
@@ -837,7 +838,7 @@ ggsave(
 
 plot_lower_25 <- ggplot(
   data = param_tbl_25 %>%
-    filter(
+    dplyr::filter(
       years_low_comp != 0,
       !Parameter %in%
         c(

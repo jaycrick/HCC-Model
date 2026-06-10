@@ -1,22 +1,21 @@
 # Init. ----------------------------
 load("Sensitivity_analyses.RData")
 
-pacman::p_load(
-  expm,
-  beepr,
-  tidyverse,
-  here,
-  RColorBrewer,
-  ggthemes,
-  ggsci,
-  gridExtra,
-  scales,
-  mc2d,
-  magrittr,
-  viridis
-)
-detach("package:MASS", unload = TRUE)
-set.seed(4567385) # generated from random.org between 1 and 10000000
+library(conflicted)
+library(expm)
+library(beepr)
+library(tidyverse)
+library(here)
+library(RColorBrewer)
+library(ggthemes)
+library(ggsci)
+library(gridExtra)
+library(scales)
+library(mc2d)
+library(magrittr)
+library(viridis)
+
+set.seed(4567385)
 
 my_pal <- pal_igv("default")(7)
 names(my_pal) <- c(
@@ -150,7 +149,7 @@ risk_no_int <- function(n, y) {
       linetype = HCC_stage
     )
   ) +
-    geom_line(size = 1.5) +
+    geom_line(linewidth = 1.5) +
     theme_bw(base_family = "serif") +
     my_scale +
     my_line +
@@ -235,7 +234,7 @@ years_no_int <- function(y) {
       linetype = HCC_stage
     )
   ) +
-    geom_line(size = 1.5) +
+    geom_line(linewidth = 1.5) +
     theme_bw(base_family = "serif") +
     my_scale +
     my_line +
@@ -307,7 +306,7 @@ usfreq_graph <- function(y) {
     )
 
   yat_base <- ggplot(saveddf, aes(usfreq, testyll)) +
-    geom_line(size = 1.25) +
+    geom_line(linewidth = 1.25) +
     geom_ribbon(aes(ymin = min, ymax = max, fill = "50%"), alpha = 0.2) +
     theme_bw(base_family = "serif") +
     theme(
@@ -387,7 +386,7 @@ pafunc <- function(y) {
     )
 
   yatpa <- ggplot(saveddf, aes(probs, testyll)) +
-    geom_line(size = 1.25) +
+    geom_line(linewidth = 1.25) +
     geom_ribbon(aes(ymin = min, ymax = max, fill = "50%"), alpha = 0.2) +
     theme_bw(base_family = "serif") +
     theme(
@@ -467,7 +466,7 @@ saveddf <- tibble(p_Att, testyll, rand_list) %>%
   )
 
 plot_att <- ggplot(saveddf, aes(p_Att, testyll)) +
-  geom_line(size = 1.5) +
+  geom_line(linewidth = 1.5) +
   theme_bw(base_family = "serif") +
   ggtitle(NULL) +
   scale_x_continuous(
@@ -551,7 +550,7 @@ p_Att_Stages <- function(y) {
       fill = HCC_Stage
     )
   ) +
-    geom_line(size = 1.5) +
+    geom_line(linewidth = 1.5) +
     theme_bw(base_family = "serif") +
     ggtitle(
       "Effect of Screening Attendance within the\nPartial Adherence Cohort on Diagnosis of HCC"
@@ -591,7 +590,7 @@ p_Att_Stages <- function(y) {
       fill = HCC_Stage
     )
   ) +
-    geom_line(size = 1.5) +
+    geom_line(linewidth = 1.5) +
     theme_bw(base_family = "serif") +
     ggtitle(
       "Effect of Screening Attendance\non Stage of Diagnosis within\nthe Partial Adherence Cohort"
