@@ -1,0 +1,5 @@
+# Track large binary intermediates with Git LFS.
+# Requires: git lfs install  (once per machine)
+#           git lfs pull     (after cloning to download the files)
+*.rds filter=lfs diff=lfs merge=lfs -text
+*.RData filter=lfs diff=lfs merge=lfs -text

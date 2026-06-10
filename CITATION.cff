@@ -1,0 +1,23 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+type: software
+title: "HCC Surveillance Markov Model"
+abstract: >
+  R code implementing a Markov model for hepatocellular carcinoma (HCC)
+  surveillance in cirrhotic patients. Models BCLC-stage progression,
+  ultrasound sensitivity, patient adherence, and treatment outcomes to
+  estimate life-years gained under various surveillance strategies.
+authors:
+  - family-names: "Mac"        # TODO: replace with full author list
+    given-names: "J"
+    # orcid: "https://orcid.org/XXXX-XXXX-XXXX-XXXX"
+date-released: "2024-01-01"    # TODO: replace with actual publication date
+license: MIT
+repository-code: "https://github.com/TODO/HCC-Model"  # TODO: update URL
+doi: "TODO"   # TODO: add DOI once available
+keywords:
+  - hepatocellular carcinoma
+  - Markov model
+  - surveillance
+  - health economics
+  - BCLC staging
