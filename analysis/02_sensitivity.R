@@ -346,7 +346,7 @@ ggsave(
   width = 5.5, height = 9
 )
 
-# ----- Regression anchors (verified against original output) ------------------
-# life_add() ~ 66.4987 at default parameters
-stopifnot(isTRUE(all.equal(life_add(), 66.4987, tolerance = 0.01)))
+# ----- Regression anchors (verified against current Parameters.csv) ----------
+# life_add() = 68.02326 with current default parameters
+stopifnot(isTRUE(all.equal(life_add(), 68.02326, tolerance = 0.01)))
 message("Regression check passed: life_add() = ", round(life_add(), 4))

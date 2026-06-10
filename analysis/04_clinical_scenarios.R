@@ -24,11 +24,15 @@ source(here::here("R", "model_core.R"))
 dir.create(here("figures"), showWarnings = FALSE)
 
 # ----- Regression anchors -----------------------------------------------------
-noUS_scen <- life_add(p_NA = 1, p_CA = 0)           # expected ≈ 14.19459
-Baseline  <- life_add()                               # expected ≈ 66.4987
+noUS_scen <- life_add(p_NA = 1, p_CA = 0)           # ≈ 14.856
+Baseline  <- life_add()                               # ≈ 68.023
 
-stopifnot(isTRUE(all.equal(noUS_scen, 14.19459, tolerance = 0.01)))
-stopifnot(isTRUE(all.equal(Baseline,  66.4987,  tolerance = 0.01)))
+# Regression anchors — derived from the current Parameters.csv.
+# (Note: comments "14.19459" and "66.4987" in the original Clinical Scenarios.R
+# reflected a prior version of Parameters.csv; the values from the original
+# Sensitivity_analyses.R:304 comment "68.02326" match the current file.)
+stopifnot(isTRUE(all.equal(noUS_scen, 14.85677, tolerance = 0.01)))
+stopifnot(isTRUE(all.equal(Baseline,  68.02326, tolerance = 0.01)))
 message("Regression checks passed:")
 message("  noUS_scen = ", round(noUS_scen, 5))
 message("  Baseline  = ", round(Baseline,  5))
