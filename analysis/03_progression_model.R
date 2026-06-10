@@ -22,7 +22,7 @@ source(here::here("R", "progression.R"))
 library(RColorBrewer)
 library(ggthemes)
 library(gridExtra)
-library(mc2d)     # rpert()
+library(mc2d) # rpert()
 library(magrittr)
 
 dir.create(here("figures"), showWarnings = FALSE)
@@ -46,12 +46,12 @@ plot_usfreq_10_years <- usfreq_graph(10)
 plot_partial_adherence_10_years <- pafunc(10)
 
 # ----- Attendance probability vs life years (inline analysis) ----------------
-p_Att     <- (0:20) / 20
-tempfun   <- function(p)
+p_Att <- (0:20) / 20
+tempfun <- function(p)
   pmap_dbl(resampled_pars, p_NA = 0, p_CA = 0, p_Att = p, life_add)
-testyll   <- map_dbl(p_Att, ~ life_add(p_Att = .x, p_NA = 0, p_CA = 0))
+testyll <- map_dbl(p_Att, ~ life_add(p_Att = .x, p_NA = 0, p_CA = 0))
 rand_list <- map(p_Att, tempfun)
-saveddf   <- tibble(p_Att, testyll, rand_list) %>%
+saveddf <- tibble(p_Att, testyll, rand_list) %>%
   mutate(
     min = map_dbl(rand_list, ~ quantile(.x, probs = 0.025)),
     max = map_dbl(rand_list, ~ quantile(.x, probs = 0.975))
@@ -66,19 +66,36 @@ plot_att <- ggplot(saveddf, aes(p_Att, testyll)) +
   scale_fill_manual(values = "black") +
   labs(
     fill = "Confidence\nBand",
-    x    = "Probability of Attending\nScheduled Ultrasound Screenings",
-    y    = "Additional Life Years Gained From\nIntervention per Cohort of 100"
+    x = "Probability of Attending\nScheduled Ultrasound Screenings",
+    y = "Additional Life Years Gained From\nIntervention per Cohort of 100"
   ) +
   theme(
-    plot.title   = element_text(hjust = 0.5),
+    plot.title = element_text(hjust = 0.5),
     legend.title = element_text(hjust = 0.5)
   )
 
 plot_att
 
-ggsave(here("figures", "attendance_plot_10_year.jpg"),  plot_att, width = 6, height = 5.5)
-ggsave(here("figures", "attendance_plot_10_year.png"),  plot_att, width = 6, height = 5.5, dpi = 600)
-ggsave(here("figures", "attendance_plot_10_year.pdf"),  plot_att, width = 6, height = 5.5, dpi = 600)
+ggsave(
+  here("figures", "attendance_plot_10_year.jpg"),
+  plot_att,
+  width = 6,
+  height = 5.5
+)
+ggsave(
+  here("figures", "attendance_plot_10_year.png"),
+  plot_att,
+  width = 6,
+  height = 5.5,
+  dpi = 600
+)
+ggsave(
+  here("figures", "attendance_plot_10_year.pdf"),
+  plot_att,
+  width = 6,
+  height = 5.5,
+  dpi = 600
+)
 
 # ----- Stage-specific diagnoses vs attendance --------------------------------
 plot_att_stages_10_years <- p_Att_Stages(10)

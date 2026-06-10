@@ -17,9 +17,9 @@ hccsim <- function(n, m) {
   vec <- c(n, rep(0, 6)) # initialise with all people in cirrhosis (F4)
   for (i in 1:m) {
     for (j in (length(vec) - 1):1) {
-      worse    <- rbinom(1, vec[j], tmat[j, j + 1]) # people who progress
+      worse <- rbinom(1, vec[j], tmat[j, j + 1]) # people who progress
       vec[j + 1] <- vec[j + 1] + worse
-      vec[j]     <- vec[j] - worse
+      vec[j] <- vec[j] - worse
     }
   }
   return(vec)
@@ -44,9 +44,9 @@ us_sim <- function(n, t, m) {
   fin <- rep(0, 7)
   for (i in 1:t) {
     for (j in (length(vec) - 1):1) {
-      worse    <- rbinom(1, vec[j], tmat[j, j + 1])
+      worse <- rbinom(1, vec[j], tmat[j, j + 1])
       vec[j + 1] <- vec[j + 1] + worse
-      vec[j]     <- vec[j] - worse
+      vec[j] <- vec[j] - worse
     }
     sym <- c(
       0,
@@ -92,9 +92,9 @@ us_sim_pa <- function(n, t, m) {
   fin <- rep(0, 7)
   for (i in 1:t) {
     for (j in (length(vec) - 1):1) {
-      worse    <- rbinom(1, vec[j], tmat[j, j + 1])
+      worse <- rbinom(1, vec[j], tmat[j, j + 1])
       vec[j + 1] <- vec[j + 1] + worse
-      vec[j]     <- vec[j] - worse
+      vec[j] <- vec[j] - worse
       if (i %% m == 0) {
         sym <- c(
           0,
@@ -146,7 +146,7 @@ us_sim_pa <- function(n, t, m) {
 #' @param m  Ultrasound interval months.
 #' @return Numeric vector of length 7.
 adh_sim <- function(n, t, m) {
-  adh_group   <- rmultinom(1, n, c(pr_na, pr_pa, 1 - pr_na - pr_pa))
+  adh_group <- rmultinom(1, n, c(pr_na, pr_pa, 1 - pr_na - pr_pa))
   stage_caught <- us_sim(adh_group[3], t, m) + us_sim_pa(adh_group[2], t, m)
   stage_caught[7] <- stage_caught[7] + adh_group[1]
   return(stage_caught)

@@ -193,7 +193,7 @@ curl -fsSL https://github.com/posit-dev/air/releases/latest/download/air-install
 | Hook | What it does |
 |------|-------------|
 | `pre-commit` | Runs `air format` on staged `.R` files and re-stages them automatically |
-| `commit-msg` | Requires a [gitmoji](https://gitmoji.dev) prefix (e.g. `:bug:`, `:sparkles:`) |
+| `commit-msg` | Requires one of five prefixes: `:zap:` `:bug:` `:tv:` `:cop:` `:abc:` |
 
 Format any file manually with `air format <file.R>`, or format the whole project with `air format .`.
 

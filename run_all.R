@@ -16,14 +16,18 @@
 
 library(here)
 
-args          <- commandArgs(trailingOnly = TRUE)
+args <- commandArgs(trailingOnly = TRUE)
 run_bootstrap <- "--bootstrap" %in% args
 
 if (run_bootstrap) {
-  message("==> Running bootstrap parameter estimation (this will take a long time)...")
+  message(
+    "==> Running bootstrap parameter estimation (this will take a long time)..."
+  )
   source(here("analysis", "01_bootstrap_params.R"))
 } else {
-  message("==> Skipping 01_bootstrap_params.R (using shipped data-derived/ artifacts).")
+  message(
+    "==> Skipping 01_bootstrap_params.R (using shipped data-derived/ artifacts)."
+  )
   message("    Pass --bootstrap to regenerate from scratch.")
 }
 
