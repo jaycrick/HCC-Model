@@ -1,5 +1,7 @@
 # HCC Surveillance Markov Model
 
+[![git3moji](https://img.shields.io/badge/git3moji-%E2%9A%A1%EF%B8%8F%F0%9F%90%9B%F0%9F%93%BA%F0%9F%91%AE%F0%9F%94%A4-fffad8.svg?style=flat-square)](https://robinpokorny.github.io/git3moji/)
+
 Code for the model described in:
 
 > Cumming J, Scott N, Howell J, Flores JE, Pavlyshyn D, Hellard ME, Winata LS, Ryan M, Sutherland T, Thompson AJ, Doyle JS, Sacks-Davis R.
@@ -193,7 +195,7 @@ curl -fsSL https://github.com/posit-dev/air/releases/latest/download/air-install
 | Hook | What it does |
 |------|-------------|
 | `pre-commit` | Runs `air format` on staged `.R` files and re-stages them automatically |
-| `commit-msg` | Requires one of five prefixes: `:zap:` `:bug:` `:tv:` `:cop:` `:abc:` |
+| `commit-msg` | Enforces [git3moji](https://robinpokorny.github.io/git3moji/) prefixes: `:zap:` `:bug:` `:tv:` `:cop:` `:abc:` |
 
 Format any file manually with `air format <file.R>`, or format the whole project with `air format .`.
 
