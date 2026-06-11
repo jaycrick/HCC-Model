@@ -17,7 +17,9 @@ ran_vars <- function(x = 1, ignore = NULL) {
   for (i in 1:x) {
     rparam_tbl <- as_tibble(param_def) %>%
       rowwise() %>%
-      mutate(new = rpert(1, LOWER, POINT, UPPER)) %>%
+      mutate(
+        new = if (LOWER == UPPER) POINT else rpert(1, LOWER, POINT, UPPER)
+      ) %>%
       ungroup() %>%
       bind_cols(
         Stage = c(
@@ -369,9 +371,13 @@ pafunc <- function(y) {
 p_Att_Stages <- function(y) {
   p_Att <- (0:20) / 20
   tempfun <- function(p)
-    map_df(
+    pmap_df(
       resampled_pars,
-      ~ pmap_df(.x, p_NA = 0, p_CA = 0, p_Att = p, t = y * 12, adh_theor)
+      p_NA = 0,
+      p_CA = 0,
+      p_Att = p,
+      t = y * 12,
+      adh_theor
     )
   number <- map_df(
     p_Att,
