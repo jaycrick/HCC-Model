@@ -35,7 +35,7 @@ authors:
     given-names: Rachel
 date-released: "2024-07-01"
 license: MIT
-repository-code: "https://github.com/TODO/HCC-Model"
+repository-code: "https://github.com/jaycrick/HCC-Model"
 doi: 10.3390/cancers16152745
 url: "https://www.mdpi.com/2072-6694/16/15/2745"
 keywords:
