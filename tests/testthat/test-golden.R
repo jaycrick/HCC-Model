@@ -68,57 +68,53 @@ test_that("neg_log_lik(hypo_probs) value is stable", {
   )
 })
 
-test_that("scenario functions reproduce the golden fixture (tolerance 1e-12)", {
-  funs <- list(
-    base = base_scen_fun,
-    `1a` = scen_1a_fun,
-    `1b` = scen_1b_fun,
-    `2` = scen_2_fun,
-    `3` = scen_3_fun
+# life-years of one scenario on rows20 at base risk, via the scenarios API
+scen_ly <- function(id) {
+  # nolint next: object_usage_linter.
+  long <- run_scenarios(rows20, risk = risk_multipliers["base"])
+  long$ly[long$scenario == id]
+}
+
+test_that("scenarios reproduce the golden fixture (tolerance 1e-12)", {
+  ids <- c(
+    base = "baseline",
+    `1a` = "real_adh",
+    `1b` = "opt_adh",
+    `2` = "diag_sens",
+    `3` = "treat"
   )
-  for (nm in names(funs)) {
+  for (nm in names(ids)) {
     expect_equal(
-      purrr::pmap_dbl(rows20, funs[[nm]]),
+      scen_ly(ids[[nm]]),
       golden[[paste0("scen_", nm)]],
       tolerance = 1e-12,
       label = paste0(
         "scen_",
         nm,
-        "_fun on first 20 rows of resampled_pars_fin (golden fixture)"
+        " (",
+        ids[[nm]],
+        ") on first 20 rows of resampled_pars_fin (golden fixture)"
       )
     )
   }
 })
 
-test_that("scenario functions match shipped resampled_pars_fin columns", {
+test_that("scenarios match shipped resampled_pars_fin columns", {
   # NOTE: the shipped columns were computed on another machine/run and differ
   # from a fresh computation by ~2e-16 relative (floating-point noise), so a
   # tolerance of exactly 0 is false here; 1e-12 is the documented
   # float-reordering tolerance. The golden test above compares against a locally generated fixture.
-  stored <- list(
-    base = "Baseline",
-    `1a` = "scen_1a",
-    `1b` = "scen_1b",
-    `2` = "scen_2",
-    `3` = "scen_3"
-  )
-  funs <- list(
-    base = base_scen_fun,
-    `1a` = scen_1a_fun,
-    `1b` = scen_1b_fun,
-    `2` = scen_2_fun,
-    `3` = scen_3_fun
-  )
-  for (nm in names(funs)) {
+  stored <- scenario_table$column
+  names(stored) <- scenario_table$id
+  for (id in names(stored)) {
     expect_equal(
-      purrr::pmap_dbl(rows20, funs[[nm]]),
-      rows20[[stored[[nm]]]],
+      scen_ly(id),
+      rows20[[stored[[id]]]],
       tolerance = 1e-12,
       label = paste0(
-        "scen_",
-        nm,
-        "_fun vs stored column '",
-        stored[[nm]],
+        id,
+        " vs stored column '",
+        stored[[id]],
         "' in data-derived/resampled_pars_fin.rds (rows 1-20)"
       )
     )

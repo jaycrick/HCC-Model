@@ -31,6 +31,7 @@
 source(here::here("R", "setup.R"))
 source(here::here("R", "model_core.R"))
 source(here::here("R", "bootstrap.R"))
+source(here::here("R", "scenarios.R"))
 
 library(hypogeom) # Written for this project by D. Pavlyshyn; see README for install
 library(parallel)
@@ -437,76 +438,13 @@ summary(resampled_pars$Sens_A)
 quantile(resampled_pars$Sens_A, c(0.025, 0.975))
 
 # ----- Scenario life-year calculations ----------------------------------------
-resampled_pars <- resampled_pars %>%
-  mutate(
-    Baseline = pmap_dbl(., base_scen_fun),
-    scen_1a = pmap_dbl(., scen_1a_fun),
-    scen_1b = pmap_dbl(., scen_1b_fun),
-    scen_2 = pmap_dbl(., scen_2_fun),
-    scen_3 = pmap_dbl(., scen_3_fun),
-    Baseline_low_risk = pmap_dbl(
-      mutate(., p_HCC = params_def$p_HCC / 2),
-      base_scen_fun
-    ),
-    scen_1a_low_risk = pmap_dbl(
-      mutate(., p_HCC = params_def$p_HCC / 2),
-      scen_1a_fun
-    ),
-    scen_1b_low_risk = pmap_dbl(
-      mutate(., p_HCC = params_def$p_HCC / 2),
-      scen_1b_fun
-    ),
-    scen_2_low_risk = pmap_dbl(
-      mutate(., p_HCC = params_def$p_HCC / 2),
-      scen_2_fun
-    ),
-    scen_3_low_risk = pmap_dbl(
-      mutate(., p_HCC = params_def$p_HCC / 2),
-      scen_3_fun
-    ),
-    Baseline_high_risk = pmap_dbl(
-      mutate(., p_HCC = params_def$p_HCC * 2),
-      base_scen_fun
-    ),
-    scen_1a_high_risk = pmap_dbl(
-      mutate(., p_HCC = params_def$p_HCC * 2),
-      scen_1a_fun
-    ),
-    scen_1b_high_risk = pmap_dbl(
-      mutate(., p_HCC = params_def$p_HCC * 2),
-      scen_1b_fun
-    ),
-    scen_2_high_risk = pmap_dbl(
-      mutate(., p_HCC = params_def$p_HCC * 2),
-      scen_2_fun
-    ),
-    scen_3_high_risk = pmap_dbl(
-      mutate(., p_HCC = params_def$p_HCC * 2),
-      scen_3_fun
-    )
-  )
+# Scenario definitions, risk levels and legacy column names: R/scenarios.R.
+resampled_pars <- bind_cols(
+  resampled_pars,
+  scenario_columns(run_scenarios(resampled_pars))
+)
 
 head(resampled_pars)
-
-resampled_pars <- resampled_pars %>%
-  mutate(
-    scen_1a_diff = scen_1a - Baseline,
-    scen_1b_diff = scen_1b - Baseline,
-    scen_2_diff = scen_2 - Baseline,
-    scen_3_diff = scen_3 - Baseline,
-    scen_1a_3 = scen_1a - scen_2,
-    scen_1a_4 = scen_1a - scen_3,
-    scen_1b_3 = scen_1b - scen_2,
-    scen_1b_4 = scen_1b - scen_3,
-    scen_1a_diff_low_risk = scen_1a_low_risk - Baseline_low_risk,
-    scen_1b_diff_low_risk = scen_1b_low_risk - Baseline_low_risk,
-    scen_2_diff_low_risk = scen_2_low_risk - Baseline_low_risk,
-    scen_3_diff_low_risk = scen_3_low_risk - Baseline_low_risk,
-    scen_1a_diff_high_risk = scen_1a_high_risk - Baseline_high_risk,
-    scen_1b_diff_high_risk = scen_1b_high_risk - Baseline_high_risk,
-    scen_2_diff_high_risk = scen_2_high_risk - Baseline_high_risk,
-    scen_3_diff_high_risk = scen_3_high_risk - Baseline_high_risk
-  )
 
 summary(resampled_pars$scen_1a_diff)
 quantile(resampled_pars$scen_3_diff, c(0.025, 0.975))
@@ -749,45 +687,30 @@ results_tbl <- resampled_pars %>%
     upper = quantile(value, 0.975)
   )
 
+# Point estimates at the hypo_probs parameters (Sym_B derived from Sym_A, as
+# for the bootstrap draws), base risk level only.
+point_wide <- scenario_columns(
+  run_scenarios(default_param_tbl, risk = risk_multipliers["base"])
+)
+point_results <- c(
+  "scen_1a_diff",
+  "scen_1b_diff",
+  "scen_2_diff",
+  "scen_3_diff",
+  "scen_1a",
+  "scen_1b",
+  "scen_2",
+  "scen_3",
+  "scen_1a_3",
+  "scen_1a_4",
+  "scen_1b_3",
+  "scen_1b_4"
+)
 results_tbl <- results_tbl %>%
   rows_update(
     tibble(
-      result = c(
-        "scen_1a_diff",
-        "scen_1b_diff",
-        "scen_2_diff",
-        "scen_3_diff",
-        "scen_1a",
-        "scen_1b",
-        "scen_2",
-        "scen_3",
-        "scen_1a_3",
-        "scen_1a_4",
-        "scen_1b_3",
-        "scen_1b_4"
-      ),
-      point = c(
-        pmap_dbl(default_param_tbl, scen_1a_fun) -
-          pmap_dbl(default_param_tbl, base_scen_fun),
-        pmap_dbl(default_param_tbl, scen_1b_fun) -
-          pmap_dbl(default_param_tbl, base_scen_fun),
-        pmap_dbl(default_param_tbl, scen_2_fun) -
-          pmap_dbl(default_param_tbl, base_scen_fun),
-        pmap_dbl(default_param_tbl, scen_3_fun) -
-          pmap_dbl(default_param_tbl, base_scen_fun),
-        pmap_dbl(default_param_tbl, scen_1a_fun),
-        pmap_dbl(default_param_tbl, scen_1b_fun),
-        pmap_dbl(default_param_tbl, scen_2_fun),
-        pmap_dbl(default_param_tbl, scen_3_fun),
-        pmap_dbl(default_param_tbl, scen_1a_fun) -
-          pmap_dbl(default_param_tbl, scen_2_fun),
-        pmap_dbl(default_param_tbl, scen_1a_fun) -
-          pmap_dbl(default_param_tbl, scen_3_fun),
-        pmap_dbl(default_param_tbl, scen_1b_fun) -
-          pmap_dbl(default_param_tbl, scen_2_fun),
-        pmap_dbl(default_param_tbl, scen_1b_fun) -
-          pmap_dbl(default_param_tbl, scen_3_fun)
-      )
+      result = point_results,
+      point = unlist(point_wide[1, point_results], use.names = FALSE)
     ),
     by = "result"
   )

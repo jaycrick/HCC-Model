@@ -20,6 +20,7 @@
 # ----- Initialise -------------------------------------------------------------
 source(here::here("R", "setup.R"))
 source(here::here("R", "model_core.R"))
+source(here::here("R", "scenarios.R"))
 
 dir.create(here("figures"), showWarnings = FALSE)
 
@@ -37,125 +38,42 @@ message("Regression checks passed:")
 message("  noUS_scen = ", round(noUS_scen, 5))
 message("  Baseline  = ", round(Baseline, 5))
 
-# ----- Scenario 1: Realistic adherence improvement ---------------------------
-scen_1a <- life_add(
-  p_NA = params_def$p_NA - 0.05,
-  p_CA = params_def$p_CA + 0.10,
-  p_Att = params_def$p_Att + 0.10,
-  Sens_0 = params_def$Sens_0,
-  Sens_A = params_def$Sens_A,
-  Sens_B = params_def$Sens_B,
-  Sens_C = params_def$Sens_C,
-  Sens_D = params_def$Sens_D,
-  L_0 = params_def$L_0,
-  L_A = params_def$L_A,
-  L_B = params_def$L_B,
-  L_C = params_def$L_C,
-  L_D = params_def$L_D
-)
-
-# ----- Scenario 2: Optimistic adherence improvement --------------------------
-scen_1b <- life_add(
-  p_NA = params_def$p_NA - 0.10,
-  p_CA = params_def$p_CA + 0.15,
-  p_Att = params_def$p_Att + 0.20,
-  Sens_0 = params_def$Sens_0,
-  Sens_A = params_def$Sens_A,
-  Sens_B = params_def$Sens_B,
-  Sens_C = params_def$Sens_C,
-  Sens_D = params_def$Sens_D,
-  L_0 = params_def$L_0,
-  L_A = params_def$L_A,
-  L_B = params_def$L_B,
-  L_C = params_def$L_C,
-  L_D = params_def$L_D
-)
-
-# ----- Scenario 3: Improved ultrasound sensitivity ---------------------------
-scen_2 <- life_add(
-  p_NA = params_def$p_NA,
-  p_CA = params_def$p_CA,
-  p_Att = params_def$p_Att,
-  Sens_0 = params_def$Sens_0 + 0.05,
-  Sens_A = params_def$Sens_A + 0.05,
-  Sens_B = params_def$Sens_B + 0.05,
-  Sens_C = params_def$Sens_C,
-  Sens_D = params_def$Sens_D,
-  L_0 = params_def$L_0,
-  L_A = params_def$L_A,
-  L_B = params_def$L_B,
-  L_C = params_def$L_C,
-  L_D = params_def$L_D
-)
-
-# ----- Scenario 4: Better treatments -----------------------------------------
-scen_3 <- life_add(
-  p_NA = params_def$p_NA,
-  p_CA = params_def$p_CA,
-  p_Att = params_def$p_Att,
-  Sens_0 = params_def$Sens_0,
-  Sens_A = params_def$Sens_A,
-  Sens_B = params_def$Sens_B,
-  Sens_C = params_def$Sens_C,
-  Sens_D = params_def$Sens_D,
-  L_0 = params_def$L_0,
-  L_A = params_def$L_A + 1,
-  L_B = params_def$L_B + 0.5,
-  L_C = params_def$L_C + 0.5,
-  L_D = params_def$L_D
-)
+# ----- Point estimates for every scenario and risk level -----------------------
+# Scenario definitions: R/scenarios.R. At default parameters Sym_B comes from
+# params_def (as life_add() does), not derived from Sym_A.
+point <- run_scenarios(tibble(.rows = 1), derive_sym_b = FALSE)
 
 # ----- Load bootstrap outputs -------------------------------------------------
 resampled_pars <- readRDS(here("data-derived", "resampled_pars_fin.rds"))
 
 # ----- All scenarios (absolute life years) ------------------------------------
-violin_scenarios <- tribble(
-  ~Scenario,
-  ~`Life Years per Cohort of 100`,
-  "Treatment Improvements",
-  resampled_pars$scen_3,
-  "Diagnosis Sensitivity\nImprovements",
-  resampled_pars$scen_2,
-  "Optimistic Adherence\nImprovements",
-  resampled_pars$scen_1b,
-  "Realistic Adherence\nImprovements",
-  resampled_pars$scen_1a,
-  "Current Scenario",
-  resampled_pars$Baseline
-) %>%
-  unnest(`Life Years per Cohort of 100`)
+# Order: treatment, diagnosis, optimistic, realistic adherence, baseline.
+all_tbl <- scenario_table[c(5, 4, 3, 2, 1), ]
+violin_scenarios <- tibble(
+  Scenario = rep(all_tbl$label, each = nrow(resampled_pars)),
+  `Life Years per Cohort of 100` = unlist(
+    resampled_pars[all_tbl$column],
+    use.names = FALSE
+  )
+)
 
-scenarios <- tribble(
-  ~Scenario,
-  ~`Life Years per Cohort of 100`,
-  ~type,
-  ~lowCI,
-  ~highCI,
-  "Treatment Improvements",
-  scen_3,
-  "scen",
-  as.double(quantile(resampled_pars$scen_3, 0.025)),
-  as.double(quantile(resampled_pars$scen_3, 0.975)),
-  "Diagnosis Sensitivity\nImprovements",
-  scen_2,
-  "scen",
-  as.double(quantile(resampled_pars$scen_2, 0.025)),
-  as.double(quantile(resampled_pars$scen_2, 0.975)),
-  "Optimistic Adherence\nImprovements",
-  scen_1b,
-  "scen",
-  as.double(quantile(resampled_pars$scen_1b, 0.025)),
-  as.double(quantile(resampled_pars$scen_1b, 0.975)),
-  "Realistic Adherence\nImprovements",
-  scen_1a,
-  "scen",
-  as.double(quantile(resampled_pars$scen_1a, 0.025)),
-  as.double(quantile(resampled_pars$scen_1a, 0.975)),
-  "Current Scenario",
-  Baseline,
-  "base",
-  as.double(quantile(resampled_pars$Baseline, 0.025)),
-  as.double(quantile(resampled_pars$Baseline, 0.975))
+scenarios <- tibble(
+  Scenario = all_tbl$label,
+  `Life Years per Cohort of 100` = point$ly[point$risk == "base"][match(
+    all_tbl$id,
+    point$scenario[point$risk == "base"]
+  )],
+  type = ifelse(all_tbl$id == "baseline", "base", "scen"),
+  lowCI = vapply(
+    all_tbl$column,
+    \(cl) as.double(quantile(resampled_pars[[cl]], 0.025)),
+    numeric(1)
+  ),
+  highCI = vapply(
+    all_tbl$column,
+    \(cl) as.double(quantile(resampled_pars[[cl]], 0.975)),
+    numeric(1)
+  )
 )
 
 all_scens_plot <- ggplot(
@@ -179,117 +97,6 @@ ggsave(
   here("figures", "scenarios_all.jpg"),
   height = 4,
   width = 6
-)
-
-# ----- Scenario improvements (difference from baseline) ----------------------
-new_scenarios <- tribble(
-  ~Scenario,
-  ~`Life Years per Cohort of 100`,
-  ~type,
-  ~lowCI,
-  ~highCI,
-  "Treatment Improvements",
-  scen_3 - Baseline,
-  "Point\nEstimate",
-  as.double(quantile(resampled_pars$scen_3_diff, 0.025)),
-  as.double(quantile(resampled_pars$scen_3_diff, 0.975)),
-  "Diagnosis Sensitivity\nImprovements",
-  scen_2 - Baseline,
-  "Point\nEstimate",
-  as.double(quantile(resampled_pars$scen_2_diff, 0.025)),
-  as.double(quantile(resampled_pars$scen_2_diff, 0.975)),
-  "Optimistic Adherence\nImprovements",
-  scen_1b - Baseline,
-  "Point\nEstimate",
-  as.double(quantile(resampled_pars$scen_1b_diff, 0.025)),
-  as.double(quantile(resampled_pars$scen_1b_diff, 0.975)),
-  "Realistic Adherence\nImprovements",
-  scen_1a - Baseline,
-  "Point\nEstimate",
-  as.double(quantile(resampled_pars$scen_1a_diff, 0.025)),
-  as.double(quantile(resampled_pars$scen_1a_diff, 0.975))
-)
-
-param_names <- readRDS(here("data-derived", "param_names.rds"))
-param_names[c("treat_scens", "diag_scen", "opt_adh", "real_adh")] <-
-  new_scenarios[[2]]
-param_names[c(
-  "treat_scens_lower",
-  "diag_scen_lower",
-  "opt_adh_lower",
-  "real_adh_lower"
-)] <- new_scenarios[[4]]
-param_names[c(
-  "treat_scens_upper",
-  "diag_scen_upper",
-  "opt_adh_upper",
-  "real_adh_upper"
-)] <- new_scenarios[[5]]
-saveRDS(param_names, file = here("data-derived", "param_names.rds"))
-
-new_violin_scenarios <- tribble(
-  ~Scenario,
-  ~`Life Years per Cohort of 100`,
-  "Treatment Improvements",
-  resampled_pars$scen_3_diff,
-  "Diagnosis Sensitivity\nImprovements",
-  resampled_pars$scen_2_diff,
-  "Optimistic Adherence\nImprovements",
-  resampled_pars$scen_1b_diff,
-  "Realistic Adherence\nImprovements",
-  resampled_pars$scen_1a_diff
-) %>%
-  unnest(`Life Years per Cohort of 100`)
-
-new_scens_plot <- ggplot(
-  data = new_violin_scenarios,
-  mapping = aes(Scenario, `Life Years per Cohort of 100`)
-) +
-  geom_violin(trim = TRUE) +
-  theme_bw(base_family = "serif", base_size = 12) +
-  scale_x_discrete(
-    limits = c(
-      "Realistic Adherence\nImprovements",
-      "Optimistic Adherence\nImprovements",
-      "Diagnosis Sensitivity\nImprovements",
-      "Treatment Improvements"
-    )
-  ) +
-  labs(x = "Scenario") +
-  theme(
-    legend.position = "right",
-    legend.title = element_blank(),
-    axis.text.x = element_text(angle = 30, vjust = 1, hjust = 1)
-  ) +
-  geom_point(
-    data = new_scenarios,
-    aes(Scenario, `Life Years per Cohort of 100`, shape = type),
-    size = 3,
-    show.legend = TRUE
-  ) +
-  scale_y_continuous(limits = c(0, 30), expand = expansion(0))
-
-new_scens_plot
-
-ggsave(
-  plot = new_scens_plot,
-  here("figures", "scenarios_new.jpg"),
-  width = 6,
-  height = 4
-)
-ggsave(
-  plot = new_scens_plot,
-  here("figures", "scenarios_new.png"),
-  width = 6,
-  height = 4,
-  dpi = 600
-)
-ggsave(
-  plot = new_scens_plot,
-  here("figures", "scenarios_new.pdf"),
-  width = 6,
-  height = 4,
-  dpi = 600
 )
 
 # ----- Diminishing returns: adherence -----------------------------------------
@@ -397,374 +204,39 @@ ggsave(
   height = 4
 )
 
-# ----- Scenarios under alternative HCC risk assumptions ----------------------
-Baseline_low_risk <- life_add(p_HCC = params_def$p_HCC / 2)
-Baseline_high_risk <- life_add(p_HCC = params_def$p_HCC * 2)
-
-# Low-risk scenario calculations
-scen_1a_low_risk <- life_add(
-  p_HCC = params_def$p_HCC / 2,
-  p_NA = params_def$p_NA - 0.05,
-  p_CA = params_def$p_CA + 0.1,
-  p_Att = params_def$p_Att + 0.1,
-  Sens_0 = params_def$Sens_0,
-  Sens_A = params_def$Sens_A,
-  Sens_B = params_def$Sens_B,
-  Sens_C = params_def$Sens_C,
-  Sens_D = params_def$Sens_D,
-  L_0 = params_def$L_0,
-  L_A = params_def$L_A,
-  L_B = params_def$L_B,
-  L_C = params_def$L_C,
-  L_D = params_def$L_D
+# ----- Scenario improvements (difference from baseline), by risk level ---------
+# Writes the point estimates and 95% limits to the ledger and saves the figure.
+risk_figures <- tibble(
+  risk = c("base", "low_risk", "high_risk"),
+  xlab = c(
+    "Scenario",
+    "Scenario Under Low HCC Risk Assumption",
+    "Scenario Under High HCC Risk Assumption"
+  ),
+  ymax = c(30, 15, 60)
 )
 
-scen_1b_low_risk <- life_add(
-  p_HCC = params_def$p_HCC / 2,
-  p_NA = params_def$p_NA - 0.1,
-  p_CA = params_def$p_CA + 0.15,
-  p_Att = params_def$p_Att + 0.2,
-  Sens_0 = params_def$Sens_0,
-  Sens_A = params_def$Sens_A,
-  Sens_B = params_def$Sens_B,
-  Sens_C = params_def$Sens_C,
-  Sens_D = params_def$Sens_D,
-  L_0 = params_def$L_0,
-  L_A = params_def$L_A,
-  L_B = params_def$L_B,
-  L_C = params_def$L_C,
-  L_D = params_def$L_D
-)
+for (k in seq_len(nrow(risk_figures))) {
+  risk <- risk_figures$risk[k]
+  sfx <- ifelse(risk == "base", "", paste0("_", risk))
+  d <- scenario_diff_data(point, resampled_pars, risk)
 
-scen_2_low_risk <- life_add(
-  p_HCC = params_def$p_HCC / 2,
-  p_NA = params_def$p_NA,
-  p_CA = params_def$p_CA,
-  p_Att = params_def$p_Att,
-  Sens_0 = params_def$Sens_0 + 0.05,
-  Sens_A = params_def$Sens_A + 0.05,
-  Sens_B = params_def$Sens_B + 0.05,
-  Sens_C = params_def$Sens_C,
-  Sens_D = params_def$Sens_D,
-  L_0 = params_def$L_0,
-  L_A = params_def$L_A,
-  L_B = params_def$L_B,
-  L_C = params_def$L_C,
-  L_D = params_def$L_D
-)
+  param_names <- readRDS(here("data-derived", "param_names.rds"))
+  key <- d$points$ledger_key
+  param_names[paste0(key, sfx)] <- d$points[[2]]
+  param_names[paste0(key, "_lower", sfx)] <- d$points$lowCI
+  param_names[paste0(key, "_upper", sfx)] <- d$points$highCI
+  saveRDS(param_names, file = here("data-derived", "param_names.rds"))
 
-scen_3_low_risk <- life_add(
-  p_HCC = params_def$p_HCC / 2,
-  p_NA = params_def$p_NA,
-  p_CA = params_def$p_CA,
-  p_Att = params_def$p_Att,
-  Sens_0 = params_def$Sens_0,
-  Sens_A = params_def$Sens_A,
-  Sens_B = params_def$Sens_B,
-  Sens_C = params_def$Sens_C,
-  Sens_D = params_def$Sens_D,
-  L_0 = params_def$L_0,
-  L_A = params_def$L_A + 1,
-  L_B = params_def$L_B + 0.5,
-  L_C = params_def$L_C + 0.5,
-  L_D = params_def$L_D
-)
-
-# High-risk scenario calculations
-scen_1a_high_risk <- life_add(
-  p_HCC = params_def$p_HCC * 2,
-  p_NA = params_def$p_NA - 0.05,
-  p_CA = params_def$p_CA + 0.1,
-  p_Att = params_def$p_Att + 0.1,
-  Sens_0 = params_def$Sens_0,
-  Sens_A = params_def$Sens_A,
-  Sens_B = params_def$Sens_B,
-  Sens_C = params_def$Sens_C,
-  Sens_D = params_def$Sens_D,
-  L_0 = params_def$L_0,
-  L_A = params_def$L_A,
-  L_B = params_def$L_B,
-  L_C = params_def$L_C,
-  L_D = params_def$L_D
-)
-
-scen_1b_high_risk <- life_add(
-  p_HCC = params_def$p_HCC * 2,
-  p_NA = params_def$p_NA - 0.1,
-  p_CA = params_def$p_CA + 0.15,
-  p_Att = params_def$p_Att + 0.2,
-  Sens_0 = params_def$Sens_0,
-  Sens_A = params_def$Sens_A,
-  Sens_B = params_def$Sens_B,
-  Sens_C = params_def$Sens_C,
-  Sens_D = params_def$Sens_D,
-  L_0 = params_def$L_0,
-  L_A = params_def$L_A,
-  L_B = params_def$L_B,
-  L_C = params_def$L_C,
-  L_D = params_def$L_D
-)
-
-scen_2_high_risk <- life_add(
-  p_HCC = params_def$p_HCC * 2,
-  p_NA = params_def$p_NA,
-  p_CA = params_def$p_CA,
-  p_Att = params_def$p_Att,
-  Sens_0 = params_def$Sens_0 + 0.05,
-  Sens_A = params_def$Sens_A + 0.05,
-  Sens_B = params_def$Sens_B + 0.05,
-  Sens_C = params_def$Sens_C,
-  Sens_D = params_def$Sens_D,
-  L_0 = params_def$L_0,
-  L_A = params_def$L_A,
-  L_B = params_def$L_B,
-  L_C = params_def$L_C,
-  L_D = params_def$L_D
-)
-
-scen_3_high_risk <- life_add(
-  p_HCC = params_def$p_HCC * 2,
-  p_NA = params_def$p_NA,
-  p_CA = params_def$p_CA,
-  p_Att = params_def$p_Att,
-  Sens_0 = params_def$Sens_0,
-  Sens_A = params_def$Sens_A,
-  Sens_B = params_def$Sens_B,
-  Sens_C = params_def$Sens_C,
-  Sens_D = params_def$Sens_D,
-  L_0 = params_def$L_0,
-  L_A = params_def$L_A + 1,
-  L_B = params_def$L_B + 0.5,
-  L_C = params_def$L_C + 0.5,
-  L_D = params_def$L_D
-)
-
-# ----- Low-risk scenario plot ------------------------------------------------
-new_scenarios_low_risk <- tribble(
-  ~Scenario,
-  ~`Life Years per Cohort of 100`,
-  ~type,
-  ~lowCI,
-  ~highCI,
-  "Treatment Improvements",
-  scen_3_low_risk - Baseline_low_risk,
-  "Point\nEstimate",
-  as.double(quantile(resampled_pars$scen_3_diff_low_risk, 0.025)),
-  as.double(quantile(resampled_pars$scen_3_diff_low_risk, 0.975)),
-  "Diagnosis Sensitivity\nImprovements",
-  scen_2_low_risk - Baseline_low_risk,
-  "Point\nEstimate",
-  as.double(quantile(resampled_pars$scen_2_diff_low_risk, 0.025)),
-  as.double(quantile(resampled_pars$scen_2_diff_low_risk, 0.975)),
-  "Optimistic Adherence\nImprovements",
-  scen_1b_low_risk - Baseline_low_risk,
-  "Point\nEstimate",
-  as.double(quantile(resampled_pars$scen_1b_diff_low_risk, 0.025)),
-  as.double(quantile(resampled_pars$scen_1b_diff_low_risk, 0.975)),
-  "Realistic Adherence\nImprovements",
-  scen_1a_low_risk - Baseline_low_risk,
-  "Point\nEstimate",
-  as.double(quantile(resampled_pars$scen_1a_diff_low_risk, 0.025)),
-  as.double(quantile(resampled_pars$scen_1a_diff_low_risk, 0.975))
-)
-
-param_names <- readRDS(here("data-derived", "param_names.rds"))
-param_names[c(
-  "treat_scens_low_risk",
-  "diag_scen_low_risk",
-  "opt_adh_low_risk",
-  "real_adh_low_risk"
-)] <- new_scenarios_low_risk[[2]]
-param_names[c(
-  "treat_scens_lower_low_risk",
-  "diag_scen_lower_low_risk",
-  "opt_adh_lower_low_risk",
-  "real_adh_lower_low_risk"
-)] <- new_scenarios_low_risk[[4]]
-param_names[c(
-  "treat_scens_upper_low_risk",
-  "diag_scen_upper_low_risk",
-  "opt_adh_upper_low_risk",
-  "real_adh_upper_low_risk"
-)] <- new_scenarios_low_risk[[5]]
-saveRDS(param_names, file = here("data-derived", "param_names.rds"))
-
-new_violin_scenarios_low_risk <- tribble(
-  ~Scenario,
-  ~`Life Years per Cohort of 100`,
-  "Treatment Improvements",
-  resampled_pars$scen_3_diff_low_risk,
-  "Diagnosis Sensitivity\nImprovements",
-  resampled_pars$scen_2_diff_low_risk,
-  "Optimistic Adherence\nImprovements",
-  resampled_pars$scen_1b_diff_low_risk,
-  "Realistic Adherence\nImprovements",
-  resampled_pars$scen_1a_diff_low_risk
-) %>%
-  unnest(`Life Years per Cohort of 100`)
-
-new_scens_plot_low_risk <- ggplot(
-  data = new_violin_scenarios_low_risk,
-  mapping = aes(Scenario, `Life Years per Cohort of 100`)
-) +
-  geom_violin(trim = TRUE) +
-  theme_bw(base_family = "serif", base_size = 12) +
-  scale_x_discrete(
-    limits = c(
-      "Realistic Adherence\nImprovements",
-      "Optimistic Adherence\nImprovements",
-      "Diagnosis Sensitivity\nImprovements",
-      "Treatment Improvements"
+  fig <- plot_scenario_violins(d, risk_figures$xlab[k], risk_figures$ymax[k])
+  print(fig)
+  for (ext in c("jpg", "png", "pdf")) {
+    ggsave(
+      plot = fig,
+      here("figures", paste0("scenarios_new", sfx, ".", ext)),
+      width = 6,
+      height = 4,
+      dpi = if (ext == "jpg") 300 else 600
     )
-  ) +
-  labs(x = "Scenario Under Low HCC Risk Assumption") +
-  theme(
-    legend.position = "right",
-    legend.title = element_blank(),
-    axis.text.x = element_text(angle = 30, vjust = 1, hjust = 1)
-  ) +
-  geom_point(
-    data = new_scenarios_low_risk,
-    aes(Scenario, `Life Years per Cohort of 100`, shape = type),
-    size = 3,
-    show.legend = TRUE
-  ) +
-  scale_y_continuous(limits = c(0, 15), expand = expansion(0))
-
-new_scens_plot_low_risk
-
-ggsave(
-  plot = new_scens_plot_low_risk,
-  here("figures", "scenarios_new_low_risk.jpg"),
-  width = 6,
-  height = 4
-)
-ggsave(
-  plot = new_scens_plot_low_risk,
-  here("figures", "scenarios_new_low_risk.png"),
-  width = 6,
-  height = 4,
-  dpi = 600
-)
-ggsave(
-  plot = new_scens_plot_low_risk,
-  here("figures", "scenarios_new_low_risk.pdf"),
-  width = 6,
-  height = 4,
-  dpi = 600
-)
-
-# ----- High-risk scenario plot -----------------------------------------------
-new_scenarios_high_risk <- tribble(
-  ~Scenario,
-  ~`Life Years per Cohort of 100`,
-  ~type,
-  ~lowCI,
-  ~highCI,
-  "Treatment Improvements",
-  scen_3_high_risk - Baseline_high_risk,
-  "Point\nEstimate",
-  as.double(quantile(resampled_pars$scen_3_diff_high_risk, 0.025)),
-  as.double(quantile(resampled_pars$scen_3_diff_high_risk, 0.975)),
-  "Diagnosis Sensitivity\nImprovements",
-  scen_2_high_risk - Baseline_high_risk,
-  "Point\nEstimate",
-  as.double(quantile(resampled_pars$scen_2_diff_high_risk, 0.025)),
-  as.double(quantile(resampled_pars$scen_2_diff_high_risk, 0.975)),
-  "Optimistic Adherence\nImprovements",
-  scen_1b_high_risk - Baseline_high_risk,
-  "Point\nEstimate",
-  as.double(quantile(resampled_pars$scen_1b_diff_high_risk, 0.025)),
-  as.double(quantile(resampled_pars$scen_1b_diff_high_risk, 0.975)),
-  "Realistic Adherence\nImprovements",
-  scen_1a_high_risk - Baseline_high_risk,
-  "Point\nEstimate",
-  as.double(quantile(resampled_pars$scen_1a_diff_high_risk, 0.025)),
-  as.double(quantile(resampled_pars$scen_1a_diff_high_risk, 0.975))
-)
-
-param_names <- readRDS(here("data-derived", "param_names.rds"))
-param_names[c(
-  "treat_scens_high_risk",
-  "diag_scen_high_risk",
-  "opt_adh_high_risk",
-  "real_adh_high_risk"
-)] <- new_scenarios_high_risk[[2]]
-param_names[c(
-  "treat_scens_lower_high_risk",
-  "diag_scen_lower_high_risk",
-  "opt_adh_lower_high_risk",
-  "real_adh_lower_high_risk"
-)] <- new_scenarios_high_risk[[4]]
-param_names[c(
-  "treat_scens_upper_high_risk",
-  "diag_scen_upper_high_risk",
-  "opt_adh_upper_high_risk",
-  "real_adh_upper_high_risk"
-)] <- new_scenarios_high_risk[[5]]
-saveRDS(param_names, file = here("data-derived", "param_names.rds"))
-
-new_violin_scenarios_high_risk <- tribble(
-  ~Scenario,
-  ~`Life Years per Cohort of 100`,
-  "Treatment Improvements",
-  resampled_pars$scen_3_diff_high_risk,
-  "Diagnosis Sensitivity\nImprovements",
-  resampled_pars$scen_2_diff_high_risk,
-  "Optimistic Adherence\nImprovements",
-  resampled_pars$scen_1b_diff_high_risk,
-  "Realistic Adherence\nImprovements",
-  resampled_pars$scen_1a_diff_high_risk
-) %>%
-  unnest(`Life Years per Cohort of 100`)
-
-new_scens_plot_high_risk <- ggplot(
-  data = new_violin_scenarios_high_risk,
-  mapping = aes(Scenario, `Life Years per Cohort of 100`)
-) +
-  geom_violin(trim = TRUE) +
-  theme_bw(base_family = "serif", base_size = 12) +
-  scale_x_discrete(
-    limits = c(
-      "Realistic Adherence\nImprovements",
-      "Optimistic Adherence\nImprovements",
-      "Diagnosis Sensitivity\nImprovements",
-      "Treatment Improvements"
-    )
-  ) +
-  labs(x = "Scenario Under High HCC Risk Assumption") +
-  theme(
-    legend.position = "right",
-    legend.title = element_blank(),
-    axis.text.x = element_text(angle = 30, vjust = 1, hjust = 1)
-  ) +
-  geom_point(
-    data = new_scenarios_high_risk,
-    aes(Scenario, `Life Years per Cohort of 100`, shape = type),
-    size = 3,
-    show.legend = TRUE
-  ) +
-  scale_y_continuous(limits = c(0, 60), expand = expansion(0))
-
-new_scens_plot_high_risk
-
-ggsave(
-  plot = new_scens_plot_high_risk,
-  here("figures", "scenarios_new_high_risk.jpg"),
-  width = 6,
-  height = 4
-)
-ggsave(
-  plot = new_scens_plot_high_risk,
-  here("figures", "scenarios_new_high_risk.png"),
-  width = 6,
-  height = 4,
-  dpi = 600
-)
-ggsave(
-  plot = new_scens_plot_high_risk,
-  here("figures", "scenarios_new_high_risk.pdf"),
-  width = 6,
-  height = 4,
-  dpi = 600
-)
+  }
+}

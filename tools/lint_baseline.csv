@@ -1,11 +1,12 @@
 file,count
-analysis/01_bootstrap_params.R,49
+analysis/01_bootstrap_params.R,47
 analysis/02_sensitivity.R,22
 analysis/03_progression_model.R,6
-analysis/04_clinical_scenarios.R,12
-R/bootstrap.R,45
+analysis/04_clinical_scenarios.R,10
+R/bootstrap.R,15
 R/model_core.R,56
 R/progression.R,256
+R/scenarios.R,0
 R/setup.R,1
 R/simulation.R,37
 run_all.R,1
@@ -18,4 +19,5 @@ tests/testthat/test-golden.R,1
 tests/testthat/test-invariants.R,1
 tests/testthat/test-likelihood.R,6
 tests/testthat/test-paper.R,0
+tests/testthat/test-scenarios.R,0
 tools/lint_ratchet.R,0

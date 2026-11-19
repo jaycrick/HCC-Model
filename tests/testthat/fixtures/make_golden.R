@@ -9,6 +9,11 @@
 source(here::here("tests", "testthat", "helper-setup.R"))
 
 rows <- resampled_pars_fin[1:20, ]
+scen_ly <- function(id) {
+  # nolint next: object_usage_linter.
+  long <- run_scenarios(rows, risk = risk_multipliers["base"])
+  long$ly[long$scenario == id]
+}
 
 golden <- list(
   life_add_baseline = life_add(),
@@ -17,11 +22,11 @@ golden <- list(
   # KNOWN BUG C1 (gate G1): pins the CURRENT (wrong) output
   progress_untreated_100_120 = unlist(progress_untreated(n = 100, t = 120)),
   neg_log_lik_hypo_probs = neg_log_lik(hypo_probs, meds = meds),
-  scen_base = purrr::pmap_dbl(rows, base_scen_fun),
-  scen_1a = purrr::pmap_dbl(rows, scen_1a_fun),
-  scen_1b = purrr::pmap_dbl(rows, scen_1b_fun),
-  scen_2 = purrr::pmap_dbl(rows, scen_2_fun),
-  scen_3 = purrr::pmap_dbl(rows, scen_3_fun),
+  scen_base = scen_ly("baseline"),
+  scen_1a = scen_ly("real_adh"),
+  scen_1b = scen_ly("opt_adh"),
+  scen_2 = scen_ly("diag_sens"),
+  scen_3 = scen_ly("treat"),
   life_tibble_main = life_tibble(csv_main),
   life_tibble_25 = life_tibble(csv_25),
   param_names = names(readRDS(here::here("data-derived", "param_names.rds")))
