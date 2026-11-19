@@ -1,0 +1,30 @@
+Type: project
+Title: HCC Surveillance Markov Model (Cumming et al. 2024)
+Imports:
+    cli,
+    conflicted,
+    corrplot,
+    cowplot,
+    DescTools,
+    dplyr,
+    expm,
+    ggsci,
+    ggthemes,
+    gridExtra,
+    here,
+    hypogeom,
+    latex2exp,
+    magrittr,
+    mc2d,
+    patchwork,
+    ppcor,
+    RColorBrewer,
+    scales,
+    tidyverse,
+    viridis
+Suggests:
+    testthat (>= 3.0.0),
+    lintr
+Remotes:
+    damian-t-p/hypogeom
+Config/testthat/edition: 3
