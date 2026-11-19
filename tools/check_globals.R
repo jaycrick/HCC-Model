@@ -46,6 +46,24 @@ allowed <- list(
     "years_low",
     "years_high"
   ),
+  # tidy-eval / aesthetic column names in the analysis/01 figure builders
+  plot_baseline_hist = "Baseline",
+  plot_bootstrap_counts = c("name", "value"),
+  plot_rates_hist = c("name", "Point", "rate", "value"),
+  plot_rates_distribution = c("name", "Point", "rate", "value"),
+  plot_pcor_baseline = c("value", "Variable"),
+  plot_pcor_heatmap = "value",
+  plot_sensitivity_hex = c("Sens_0", "Sens_A"),
+  plot_time_range = c(
+    "mean_years",
+    "mean025",
+    "mean975",
+    "name",
+    "Point",
+    "rate",
+    "value"
+  ),
+  bootstrap_estimates = "list_of_pars",
   # tracked debt, finding C10 (R/simulation.R depends on undefined globals;
   # fixed in the simulation step of the plan)
   adh_sim = c("pr_na", "pr_pa"),
@@ -60,9 +78,7 @@ allowed <- list(
     "pr_att",
     paste0("Sym_", c("0", "A", "B", "C", "D")),
     paste0("Sens_", c("0", "A", "B", "C", "D"))
-  ),
-  # tracked debt, finding C13/S7: observed medians come from analysis/01
-  neg_log_lik = c("med_0", "med_a", "med_b", "med_c", "med_d")
+  )
 )
 
 # ----- Run codetools over the project functions -------------------------------

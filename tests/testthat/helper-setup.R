@@ -14,25 +14,9 @@ source(here::here("R", "bootstrap.R"))
 source(here::here("R", "scenarios.R"))
 source(here::here("R", "plotting.R"))
 
-# Observed data and the hard-coded point estimates used by analysis/01
-# (copied verbatim from analysis/01_bootstrap_params.R; neg_log_lik()'s
-# default `meds` argument looks for these globals).
-med_0 <- 38
-med_a <- 25
-med_b <- 10
-med_c <- 7
-med_d <- 4
-meds <- c(med_0, med_a, med_b, med_c, med_d)
-hypo_probs <- c(
-  0.07982013,
-  0.05540597,
-  0.33922926,
-  0.35681215,
-  0.16023503,
-  0.21878495,
-  0.54017653,
-  0.01015650
-)
+# The 8 likelihood parameters at the CSV point estimates (= paper Tables 1-2 =
+# the Nelder-Mead MLE; finding G7), in the order of NLL_PAR_NAMES.
+csv_par <- unlist(params_def[NLL_PAR_NAMES])
 
 resampled_pars_fin <- readRDS(
   here::here("data-derived", "resampled_pars_fin.rds")
@@ -45,25 +29,7 @@ read_params <- function(csv) read.csv(csv, row.names = 1)
 golden_path <- function()
   here::here("tests", "testthat", "fixtures", "golden.rds")
 
-# Evaluate the statements of a function body in order, inside `env`, until the
-# assignment `<name> <- ...` has run, and return that value. Lets tests reach
-# matrices that the code builds inline and does not expose.
-extract_assigned <- function(fn, name, env) {
-  for (stmt in as.list(body(fn))[-1]) {
-    eval(stmt, env)
-    if (
-      is.call(stmt) &&
-        identical(stmt[[1]], as.name("<-")) &&
-        identical(as.character(stmt[[2]]), name)
-    ) {
-      return(get(name, envir = env))
-    }
-  }
-  stop("assignment to '", name, "' not found in function body")
-}
-
-# The 15x15 matrix built inside neg_log_lik()
-nll_matrix <- function(probs = hypo_probs) {
-  env <- list2env(list(hypo_probs = probs), parent = globalenv())
-  extract_assigned(neg_log_lik, "matrix_of_trans", env)
+# The 15x15 matrix used inside neg_log_lik(), for the 8-vector `probs`
+nll_matrix <- function(probs = csv_par) {
+  likelihood_matrix(probs[1], probs[2], probs[6], probs[7])
 }

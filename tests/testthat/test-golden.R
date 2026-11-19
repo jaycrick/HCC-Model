@@ -59,12 +59,15 @@ test_that("progress_untreated(n=100,t=120) is stable (post gate G1)", {
   )
 })
 
-test_that("neg_log_lik(hypo_probs) value is stable", {
+test_that("neg_log_lik at the CSV point estimates is stable (post gate G7)", {
+  # Gate G7: the old hard-coded hypo_probs was stale (pre-G7 value
+  # 12.587514779190872); the pinned point is now data/Parameters.csv, which is
+  # the paper's MLE. Fixture entry regenerated under G7; see CHANGES.md.
   expect_equal(
-    neg_log_lik(hypo_probs, meds = meds),
-    golden$neg_log_lik_hypo_probs,
+    neg_log_lik(csv_par),
+    golden$neg_log_lik_csv,
     tolerance = 1e-12,
-    label = "neg_log_lik(hypo_probs) NLL (R/bootstrap.R)"
+    label = "neg_log_lik(CSV point estimates) NLL (R/bootstrap.R, post G7)"
   )
 })
 

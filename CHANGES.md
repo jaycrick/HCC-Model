@@ -112,3 +112,62 @@ sens_anal_25_univariate.
 
 (c) `Untreated_HCp_Cistribution_by_Risk_10_Year.jpg` is now
 `Untreated_HCC_Distribution_by_Risk_10_Year.jpg`.
+
+## G7 - stale hard-coded point estimates in analysis/01
+
+`analysis/01_bootstrap_params.R` hard-coded `hypo_probs`, which was stale.
+`data/Parameters.csv` POINT equals the paper's Tables 1-2, and equals the
+Nelder-Mead MLE from `optim()` in 01 (max |diff| 4.6e-9). 01 now takes the
+point estimates from the CSV (`params_def`) and compares the optimiser's result
+to them instead of overwriting them.
+
+| | Before (`hypo_probs`) | After (CSV) |
+|---|---|---|
+| NLL | 12.587514779190872 | 12.549739472600052 |
+| p_0 | 0.07982013 | 0.07982013 |
+| p_A | 0.05540597 | 0.05540597 |
+| p_B | 0.33922926 | 0.34353183 |
+| p_C | 0.35681215 | 0.35197652 |
+| p_D | 0.16023503 | 0.16046211 |
+| Sens_0 | 0.21878495 | 0.20916773 |
+| Sens_A | 0.54017653 | 0.53267066 |
+| Sym_A | 0.01015650 | 0.01015362 |
+
+Downstream uses of the point estimates in 01 that change: the red dots / lines
+in `HCC_Rates_Range_Plot`, `HCC_Rates_Hist`, `HCC_Rates_Violin`; the points in
+`HCC_Time_Range_Plot` and the panel of `multipanel_cals`; the cross in
+`US_sensitivity_Cal` (this already used the CSV); the ledger names
+`mean_0` .. `mean_D` (the `_Lower` / `_Upper` ones come from the bootstrap and
+do not change); and the `point` column of the results table (point-estimate
+scenarios). Ledger values `mean_*` (years in stage, 1/p/12), before -> after:
+
+| | Before | After |
+|---|---|---|
+| mean_0 | 1.0440140016 | 1.0440140016 |
+| mean_A | 1.5040497140 | 1.5040497140 |
+| mean_B | 0.2456549100 | 0.2425782011 |
+| mean_C | 0.2335495956 | 0.2367582171 |
+| mean_D | 0.5200693839 | 0.5193334011 |
+
+Tests: the golden entry `neg_log_lik_hypo_probs` (12.587514779190872) became
+`neg_log_lik_csv` (value above); it is the only golden entry regenerated.
+`test-likelihood.R` checks that Nelder-Mead from the documented start
+reproduces the CSV (1e-6 per parameter, 1e-8 in NLL) and that NLL(CSV) <
+NLL(old `hypo_probs`).
+
+### P7 - the published MLE is Nelder-Mead's stopping point
+
+The CSV / paper values are where Nelder-Mead stops at its default tolerance,
+not an exact optimum. A tight BFGS on the logit scale reaches NLL 12.5495403,
+2e-4 lower (max |delta logit| 4.6e-3; p_B 0.34353 vs 0.34307). That is
+negligible next to the bootstrap intervals, so the published values stand.
+
+### Other likelihood notes (S7)
+
+- `mlen` is n - 1 for even n (12 -> 11, 138 -> 137, 210 -> 209), per Supp. p.3
+  footnote 2; not a bug (G6 closed).
+- Supp. p.6 prints Pr(d_alpha) without the (1 - Sym) factors; the code's form
+  is correct (0.3289 vs 52/158 = 0.329 observed).
+- Pr(d_0) uses T^100 for the limit. Error against the exact closed form, and
+  against T^1000: 1.445e-6 (below the 1e-5 tested).
+- The 15x15 matrix is built by `likelihood_matrix()` with named states.

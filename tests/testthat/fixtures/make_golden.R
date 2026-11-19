@@ -20,7 +20,8 @@ golden <- list(
   screen_by_adherence_default = unlist(screen_by_adherence()),
   # KNOWN BUG C1 (gate G1): pins the CURRENT (wrong) output
   progress_untreated_100_120 = unlist(progress_untreated(n = 100, t = 120)),
-  neg_log_lik_hypo_probs = neg_log_lik(hypo_probs, meds = meds),
+  # G7: at the CSV point estimates (pre-G7 hypo_probs: 12.587514779190872)
+  neg_log_lik_csv = neg_log_lik(csv_par),
   scen_base = scen_ly("baseline"),
   scen_1a = scen_ly("real_adh"),
   scen_1b = scen_ly("opt_adh"),

@@ -131,7 +131,7 @@ test_that("15x15 likelihood matrix is row-stochastic", {
   tm <- nll_matrix()
   expect_equal(dim(tm), c(15L, 15L), label = "15x15 matrix dimensions")
   expect_equal(
-    rowSums(tm),
+    unname(rowSums(tm)),
     rep(1, 15),
     tolerance = 1e-12,
     label = "row sums of the 15x15 matrix inside neg_log_lik() (R/bootstrap.R)"
