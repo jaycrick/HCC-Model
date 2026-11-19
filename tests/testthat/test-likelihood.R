@@ -28,12 +28,12 @@ supp_matrix <- function(p0, pA, Sens0, SensA) {
   T
 }
 
-test_that("Sym_B_def == 8 * Sym_A_def (Supp. 2.1.3 footnote 4)", {
+test_that("params_def$Sym_B == 8 * params_def$Sym_A (Supp. 2.1.3 footnote 4)", {
   expect_equal(
-    Sym_B_def,
-    8 * Sym_A_def,
+    params_def$Sym_B,
+    8 * params_def$Sym_A,
     tolerance = 1e-6,
-    label = "Sym_B_def == 8*Sym_A_def (Supp. Sec 2.1.3 footnote 4; data/Parameters.csv)"
+    label = "params_def$Sym_B == 8*params_def$Sym_A (Supp. Sec 2.1.3 footnote 4; data/Parameters.csv)"
   )
 })
 

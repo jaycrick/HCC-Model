@@ -1,62 +1,104 @@
 # R/model_core.R
-# Core Markov model functions: progression matrix, ultrasound detection,
-# adherence model, life-years calculation, and sensitivity-analysis helpers.
-# All functions are pure (no file I/O, no set.seed) — they depend only on
-# objects initialised in R/setup.R.
+# Core Markov model functions: parameter handling, transition matrix,
+# untreated progression, ultrasound detection, adherence model, life-years
+# calculation, and sensitivity-analysis helpers.
+# All functions are pure (no file I/O, no set.seed) -- they depend only on
+# objects initialised in R/setup.R (`stage_list`, `params_def`).
+#
+# Model structure: monthly discrete-time Markov cohort over the seven states
+# in `stage_list` (Cirrhosis -> BCLC 0 -> A -> B -> C -> D -> Mortality);
+# Cumming et al. 2024, Cancers 16:2745, Sec. 2.1 and Fig. 1.
+# p_HCC is an ANNUAL probability; p_0..p_D, Sens_*, Sym_* are MONTHLY or
+# per-event probabilities (paper Tables 1-3).
+
+# ----- Constants --------------------------------------------------------------
+
+# Sym_B = SYM_B_RATIO * Sym_A: symptomatic detection of BCLC B is assumed eight
+# times that of BCLC A. Source: Cumming et al. 2024, Supplement Sec. 2.1.3,
+# footnote 4 (midpoint of the Sym_A = 0 and Sym_B = 0 MLEs).
+SYM_B_RATIO <- 8
+
+# Names of the five monthly stage-to-stage progression probabilities, in the
+# order of the transition matrix rows BCLC 0 .. BCLC D.
+STAGE_P_NAMES <- c("p_0", "p_A", "p_B", "p_C", "p_D")
+
+# ----- Parameter handling -----------------------------------------------------
+
+#' Override named parameters, erroring on any name that is not a parameter.
+#'
+#' This is what stops a typo such as `p_att` from silently returning the
+#' baseline (finding C2).
+#'
+#' @param params     Named list of parameters (e.g. `params_def`).
+#' @param overrides  Named list of replacement values.
+#' @return `params` with the overrides applied.
+modify_params <- function(params, overrides) {
+  if (length(overrides) == 0) {
+    return(params)
+  }
+  nms <- names(overrides)
+  if (is.null(nms) || any(nms == "")) {
+    stop("unnamed parameter override(s); all overrides must be named")
+  }
+  unknown <- setdiff(nms, names(params))
+  if (length(unknown) > 0) {
+    stop("unknown parameter(s): ", paste(unknown, collapse = ", "))
+  }
+  params[nms] <- overrides
+  params
+}
+
+# ----- Probability conversion and transition matrix ---------------------------
+
+#' Convert an annual probability to the equivalent monthly probability.
+#'
+#' Assumes a constant hazard: p_month = 1 - (1 - p_annual)^(1/12).
+#' Fleurence & Hollenbeak 2007, PharmacoEconomics 25(1):3-6.
+#'
+#' @param p  Annual probability (scalar or vector).
+#' @return Monthly probability, same shape as `p`.
+annual_to_monthly <- function(p) {
+  1 - (1 - p)^(1 / 12)
+}
+
+#' Build the 7x7 monthly transition matrix.
+#'
+#' Cirrhosis -> BCLC 0 with probability `p_HCC_month`; each BCLC stage
+#' progresses to the next with its own probability; BCLC D -> Mortality;
+#' Mortality is absorbing. Cumming et al. 2024 Cancers 16:2745, Sec. 2.1, Fig. 1.
+#'
+#' @param p_HCC_month  Monthly probability of developing HCC from cirrhosis.
+#' @param p_stage      Monthly progression probabilities (p_0, p_A, p_B, p_C,
+#'                     p_D), in that order.
+#' @return 7x7 row-stochastic matrix with dimnames `stage_list`.
+transition_matrix <- function(p_HCC_month, p_stage) {
+  stopifnot(length(p_stage) == 5)
+  p <- c(p_HCC_month, unname(p_stage)) # progression out of states 1..6
+  tm <- matrix(0, 7, 7, dimnames = list(stage_list, stage_list))
+  tm[cbind(1:6, 1:6)] <- 1 - p # stay in state
+  tm[cbind(1:6, 2:7)] <- p # move to the next state
+  tm[7, 7] <- 1 # Mortality absorbing
+  tm
+}
 
 # ----- Base progression model -------------------------------------------------
 
-#' Markov progression given n people over t months
+#' Markov progression of an untreated cohort.
 #'
-#' @param n  Starting cohort size (all in Cirrhosis at t = 0).
-#' @param t  Number of months to run.
-#' @param p_HCC  Annual probability of developing HCC from cirrhosis.
-#' @param p_0,p_A,p_B,p_C,p_D  Annual stage-to-stage transition probabilities.
-#' @return Tibble with columns matching `stage_list`.
-fromf4 <- function(
-  n,
-  t, # Given n people, how many will progress to what after t months
-  p_HCC = p_HCC_def, # NEEDS TO BE ANNUAL
-  p_0 = p_0_def,
-  p_A = p_A_def,
-  p_B = p_B_def,
-  p_C = p_C_def,
-  p_D = p_D_def
-) {
-  p_HCC <- 1 - (1 - p_HCC)^(1 / 12)
-  p_0 <- 1 - (1 - p_0)^(1 / 12)
-  p_A <- 1 - (1 - p_A)^(1 / 12)
-  p_B <- 1 - (1 - p_B)^(1 / 12)
-  p_C <- 1 - (1 - p_C)^(1 / 12)
-  p_D <- 1 - (1 - p_D)^(1 / 12)
-  tmat <- t(matrix(
-    c(
-      1 - p_HCC,
-      p_HCC,
-      rep(0, 6),
-      1 - p_0,
-      p_0,
-      rep(0, 6),
-      1 - p_A,
-      p_A,
-      rep(0, 6),
-      1 - p_B,
-      p_B,
-      rep(0, 6),
-      1 - p_C,
-      p_C,
-      rep(0, 6),
-      1 - p_D,
-      p_D,
-      rep(0, 6),
-      1
-    ),
-    7,
-    7
-  ))
-  stage <- c(n, rep(0, 6)) %*% (tmat %^% t)
-  tbl <- as_tibble(stage, .name_repair = ~stage_list)
-  return(tbl)
+#' @param ...     Parameter overrides by name (e.g. `p_HCC = 0.03`); unknown
+#'                names are an error.
+#' @param n       Starting cohort size (all in Cirrhosis at t = 0).
+#' @param t       Number of months to run.
+#' @param params  Named parameter list (default `params_def`).
+#' @return Tibble with one column per `stage_list` state (people per stage).
+progress_untreated <- function(..., n = 100, t = 120, params = params_def) {
+  params <- modify_params(params, list(...))
+  tmat <- transition_matrix(
+    annual_to_monthly(params$p_HCC), # p_HCC is annual
+    unlist(params[STAGE_P_NAMES]) # p_0..p_D are already monthly (paper Table 1)
+  )
+  stage <- c(n, rep(0, 6)) %*% (tmat %^% t) # Chapman-Kolmogorov, t steps
+  as_tibble(stage, .name_repair = ~stage_list)
 }
 
 
@@ -64,87 +106,64 @@ fromf4 <- function(
 
 #' Theoretical ultrasound detection for a cohort with a given attendance prob.
 #'
+#' Each month the cohort moves one step through the transition matrix, then
+#' symptomatic detection removes `Sym_*` of each state, and every `m` months
+#' attending people are screened with sensitivity `Sens_*`.
+#' (Cumming et al. 2024 Cancers 16:2745, Sec. 2.1-2.2.)
+#'
+#' @param Pr_Att  Probability of attending a scheduled ultrasound (0 = none,
+#'                1 = complete adherence).
+#' @param ...     Parameter overrides by name; unknown names are an error.
 #' @param n       Cohort size.
 #' @param t       Total follow-up in months.
 #' @param m       Ultrasound interval in months.
-#' @param Pr_Att  Probability of attending a scheduled ultrasound (0 = none,
-#'                1 = complete adherence).
-#' @param p_HCC … p_D,Sens_*,Sym_*  Model parameters (default to *_def values).
-#' @return Numeric vector of length 7 (people diagnosed per stage).
-us_theor_pa <- function(
+#' @param params  Named parameter list (default `params_def`).
+#' @return List with `dx` (people diagnosed per stage, length 7) and
+#'   `undiagnosed` (people still undiagnosed in each state at month `t`,
+#'   length 7); both named by `stage_list`, and `sum(dx) + sum(undiagnosed)`
+#'   equals `n`.
+screen_cohort <- function(
+  Pr_Att,
+  ...,
   n = 100,
   t = 120,
   m = 6,
-  Pr_Att, # Pr_Att is 1 for those who are comp. adh. and 0 for non
-  p_HCC = p_HCC_def, # NEEDS TO BE ANNUAL
-  p_0 = p_0_def,
-  p_A = p_A_def,
-  p_B = p_B_def,
-  p_C = p_C_def,
-  p_D = p_D_def,
-  Sens_0 = Sens_0_def,
-  Sens_A = Sens_A_def,
-  Sens_B = Sens_B_def,
-  Sens_C = Sens_C_def,
-  Sens_D = Sens_D_def,
-  Sym_0 = Sym_0_def,
-  Sym_A = Sym_A_def,
-  Sym_B = Sym_B_def,
-  Sym_C = Sym_C_def,
-  Sym_D = Sym_D_def
+  params = params_def
 ) {
-  # theoretical version of us_sim_pa
-  p_HCC <- 1 - (1 - p_HCC)^(1 / 12)
-  tmat <- t(matrix(
-    c(
-      1 - p_HCC,
-      p_HCC,
-      rep(0, 6),
-      1 - p_0,
-      p_0,
-      rep(0, 6),
-      1 - p_A,
-      p_A,
-      rep(0, 6),
-      1 - p_B,
-      p_B,
-      rep(0, 6),
-      1 - p_C,
-      p_C,
-      rep(0, 6),
-      1 - p_D,
-      p_D,
-      rep(0, 6),
-      1
-    ),
-    7,
-    7
-  )) # Creates a transition matrix
-  vec <- c(n, rep(0, 6))
+  params <- modify_params(params, list(...))
+  tmat <- transition_matrix(
+    annual_to_monthly(params$p_HCC), # p_HCC is annual
+    unlist(params[STAGE_P_NAMES])
+  )
+  vec <- c(n, rep(0, 6)) # undiagnosed people per state
   Dx <- rep(0, 7) # diagnosed people
-  sym_prob <- c(0, Sym_0, Sym_A, Sym_B, Sym_C, Sym_D, 1)
-  US_probs <- c(0, Sens_0, Sens_A, Sens_B, Sens_C, Sens_D, 1)
+  sym_prob <- c(
+    0,
+    unlist(params[paste0("Sym_", c("0", "A", "B", "C", "D"))]),
+    1
+  )
+  US_probs <- c(
+    0,
+    unlist(params[paste0("Sens_", c("0", "A", "B", "C", "D"))]),
+    1
+  )
+  attend <- c(0, rep(Pr_Att, 5), 1) # who goes to the ultrasound
   for (i in 1:t) {
     vec <- vec %*% tmat
-    sym <- vec * sym_prob
+    sym <- vec * sym_prob # detected through symptoms
     Dx <- Dx + sym
     vec <- vec - sym
     if (i %% m == 0) {
-      go <- c(
-        0,
-        vec[2] * Pr_Att,
-        vec[3] * Pr_Att,
-        vec[4] * Pr_Att,
-        vec[5] * Pr_Att,
-        vec[6] * Pr_Att,
-        vec[7]
-      ) # how many actually go to the ultrasound
-      us <- go * US_probs
+      go <- vec * attend # how many actually go to the ultrasound
+      us <- go * US_probs # detected by ultrasound
       Dx <- Dx + us
       vec <- vec - us
     }
   }
-  return(Dx)
+  list(
+    dx = setNames(as.numeric(Dx), stage_list),
+    undiagnosed = setNames(as.numeric(vec), stage_list)
+  )
 }
 
 
@@ -152,77 +171,31 @@ us_theor_pa <- function(
 
 #' Combine detection across three adherence groups (non-, partial, complete).
 #'
-#' @param n     Cohort size.
-#' @param t     Follow-up months.
-#' @param m     Ultrasound interval months.
-#' @param p_NA  Proportion non-adherent.
-#' @param p_CA  Proportion completely adherent.
-#' @param p_Att Attendance probability within partial-adherence group.
-#' @param ...   Passed through to us_theor_pa.
-#' @return Tibble with columns matching `stage_list`.
-adh_theor <- function(
+#' @param ...     Parameter overrides by name (e.g. `p_NA`, `p_CA`, `p_Att`,
+#'                `Sens_0`); unknown names are an error.
+#' @param n       Cohort size.
+#' @param t       Follow-up months.
+#' @param m       Ultrasound interval months.
+#' @param params  Named parameter list (default `params_def`).
+#' @return Tibble with one column per `stage_list` state (people diagnosed).
+screen_by_adherence <- function(
+  ...,
   n = 100,
   t = 120,
   m = 6,
-  p_NA = p_NA_def,
-  p_CA = p_CA_def,
-  p_Att = p_Att_def,
-  p_HCC = p_HCC_def, # NEEDS TO BE ANNUAL
-  p_0 = p_0_def,
-  p_A = p_A_def,
-  p_B = p_B_def,
-  p_C = p_C_def,
-  p_D = p_D_def,
-  Sens_0 = Sens_0_def,
-  Sens_A = Sens_A_def,
-  Sens_B = Sens_B_def,
-  Sens_C = Sens_C_def,
-  Sens_D = Sens_D_def,
-  Sym_0 = Sym_0_def,
-  Sym_A = Sym_A_def,
-  Sym_B = Sym_B_def,
-  Sym_C = Sym_C_def,
-  Sym_D = Sym_D_def,
-  ...
+  params = params_def
 ) {
-  # number of people, total time tracking, interval of US, uses us_theor_pa
-  adh_group <- n * c(p_NA, 1 - p_NA - p_CA, p_CA) # people in each adherence group
+  params <- modify_params(params, list(...))
+  # people in each adherence group: non-, partially, completely adherent
+  adh_group <- n * c(params$p_NA, 1 - params$p_NA - params$p_CA, params$p_CA)
 
-  custom_us_theor <- function(n, Pr_Att) {
-    # FUNCTION THAT JUST VARIES NUMBERS AND THEIR LIKELIHOOD TO ATTEND
-    us_theor_pa(
-      n,
-      Pr_Att,
-      t = t,
-      m = m,
-      p_HCC = p_HCC,
-      p_0 = p_0,
-      p_A = p_A,
-      p_B = p_B,
-      p_C = p_C,
-      p_D = p_D,
-      Sens_0 = Sens_0,
-      Sens_A = Sens_A,
-      Sens_B = Sens_B,
-      Sens_C = Sens_C,
-      Sens_D = Sens_D,
-      Sym_0 = Sym_0,
-      Sym_A = Sym_A,
-      Sym_B = Sym_B,
-      Sym_C = Sym_C,
-      Sym_D = Sym_D
-    ) %>%
-      as_tibble(.name_repair = ~stage_list)
+  caught <- function(n_group, Pr_Att) {
+    dx <- screen_cohort(Pr_Att, n = n_group, t = t, m = m, params = params)$dx
+    as_tibble(as.list(dx))
   }
 
-  stage_caught <- map2_dfr(
-    adh_group,
-    c(0, p_Att, 1),
-    .f = custom_us_theor
-  ) %>%
+  map2_dfr(adh_group, c(0, params$p_Att, 1), caught) %>%
     summarise_all(sum)
-
-  return(stage_caught)
 }
 
 
@@ -233,65 +206,18 @@ adh_theor <- function(
 #' Sums the product of stage-specific diagnoses and stage-specific life-year
 #' gains (L_*) across all adherence groups.
 #'
-#' @param n,t,m,p_NA,p_CA,p_Att,p_HCC,p_*,Sens_*,Sym_*,L_*
-#'   All default to *_def point estimates.
+#' @param ...     Parameter overrides by name (any of `names(params_def)`);
+#'                unknown names are an error.
+#' @param n       Cohort size.
+#' @param t       Follow-up months.
+#' @param m       Ultrasound interval months.
+#' @param params  Named parameter list (default `params_def`).
 #' @return Scalar life-years gained per cohort of n.
-life_add <- function(
-  n = 100,
-  t = 120,
-  m = 6,
-  p_NA = p_NA_def,
-  p_CA = p_CA_def,
-  p_Att = p_Att_def,
-  p_HCC = p_HCC_def, # NEEDS TO BE ANNUAL
-  p_0 = p_0_def,
-  p_A = p_A_def,
-  p_B = p_B_def,
-  p_C = p_C_def,
-  p_D = p_D_def,
-  Sens_0 = Sens_0_def,
-  Sens_A = Sens_A_def,
-  Sens_B = Sens_B_def,
-  Sens_C = Sens_C_def,
-  Sens_D = Sens_D_def,
-  Sym_0 = Sym_0_def,
-  Sym_A = Sym_A_def,
-  Sym_B = Sym_B_def,
-  Sym_C = Sym_C_def,
-  Sym_D = Sym_D_def,
-  L_0 = L_0_def,
-  L_A = L_A_def,
-  L_B = L_B_def,
-  L_C = L_C_def,
-  L_D = L_D_def,
-  ...
-) {
-  stage_caught <- adh_theor(
-    n = n,
-    m = m,
-    t = t,
-    p_NA = p_NA,
-    p_CA = p_CA,
-    p_Att = p_Att,
-    p_HCC = p_HCC,
-    p_0 = p_0,
-    p_A = p_A,
-    p_B = p_B,
-    p_C = p_C,
-    p_D = p_D,
-    Sens_0 = Sens_0,
-    Sens_A = Sens_A,
-    Sens_B = Sens_B,
-    Sens_C = Sens_C,
-    Sens_D = Sens_D,
-    Sym_0 = Sym_0,
-    Sym_A = Sym_A,
-    Sym_B = Sym_B,
-    Sym_C = Sym_C,
-    Sym_D = Sym_D
-  )
-  life_added <- sum(stage_caught * c(0, L_0, L_A, L_B, L_C, L_D, 0))
-  return(life_added)
+life_add <- function(..., n = 100, t = 120, m = 6, params = params_def) {
+  params <- modify_params(params, list(...))
+  stage_caught <- screen_by_adherence(n = n, t = t, m = m, params = params)
+  L <- unname(unlist(params[paste0("L_", c("0", "A", "B", "C", "D"))]))
+  sum(stage_caught * c(0, L, 0)) # life-years: sum_stage Dx_stage * L_stage
 }
 
 
@@ -303,6 +229,16 @@ dfs <- function(Parameter, value, ...) {
     pivot_wider(names_from = Parameter, values_from = value)
   return(new_df)
 }
+
+#' Keep only the model-parameter columns of a draws tibble.
+#'
+#' Bootstrap tibbles carry scenario/result columns next to the parameter
+#' columns; life_add() rejects unknown names (finding C2), so every
+#' pmap(..., life_add) call selects the parameter columns explicitly.
+#'
+#' @param df  Tibble of parameter draws (one row per draw).
+#' @return `df` restricted to columns named in `names(params_def)`.
+draws <- function(df) select(df, any_of(names(params_def)))
 
 #' Apply life_add across each row of a data-frame of parameter draws.
 years <- function(df) pmap_dbl(df, life_add)
@@ -316,11 +252,13 @@ abssum <- function(x) sum(abs(x))
 #' @return Tibble with one row per parameter × bound combination plus computed
 #'   life-year columns.
 life_tibble <- function(csv) {
-  param_csv <- read.csv(file = csv, row.names = 1)
-  param_tidy <- param_csv[1:24, 2:3] %>%
-    as.data.frame() %>%
-    rownames_to_column(var = "Parameter") %>%
-    as_tibble() %>%
+  lower <- load_params(csv, "LOWER")
+  upper <- load_params(csv, "UPPER")
+  param_tidy <- tibble(
+    Parameter = names(lower), # parameters by name, in CSV order
+    LOWER = unlist(lower, use.names = FALSE),
+    UPPER = unlist(upper, use.names = FALSE)
+  ) %>%
     pivot_longer(-Parameter, names_to = "Bound")
   param_tbl <- param_tidy %>%
     mutate(
@@ -329,22 +267,18 @@ life_tibble <- function(csv) {
       Parameter = as.factor(Parameter),
       dfs_low = map(
         dfs_new,
-        ~ if (names(.x) == "p_HCC") .x else
-          tibble(.x, p_HCC = param_csv["p_HCC", "LOWER"])
+        ~ if (names(.x) == "p_HCC") .x else tibble(.x, p_HCC = lower$p_HCC)
       ),
       dfs_high = map(
         dfs_new,
-        ~ if (names(.x) == "p_HCC") .x else
-          tibble(.x, p_HCC = param_csv["p_HCC", "UPPER"])
+        ~ if (names(.x) == "p_HCC") .x else tibble(.x, p_HCC = upper$p_HCC)
       ),
       years_mid = map_dbl(dfs_new, years),
       years_low = map_dbl(dfs_low, years),
       years_high = map_dbl(dfs_high, years),
       years_mid_comp = years_mid - life_add(),
-      years_low_comp = years_low -
-        life_add(p_HCC = param_csv["p_HCC", "LOWER"]),
-      years_high_comp = years_high -
-        life_add(p_HCC = param_csv["p_HCC", "UPPER"])
+      years_low_comp = years_low - life_add(p_HCC = lower$p_HCC),
+      years_high_comp = years_high - life_add(p_HCC = upper$p_HCC)
     )
   return(param_tbl)
 }

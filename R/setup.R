@@ -5,11 +5,10 @@
 
 # ----- Libraries --------------------------------------------------------------
 library(conflicted) # must load first to intercept ambiguous calls
-library(cli)
 library(expm) # matrix exponentiation (%^%)
 library(tidyverse)
 library(here)
-library(viridis)
+library(viridis) # turbo palette, scale_fill_viridis
 library(scales)
 library(latex2exp)
 
@@ -35,31 +34,30 @@ stage_list <- c(
 )
 
 # ----- Default parameters (point estimates) -----------------------------------
-# Reads Parameters.csv from data/ and assigns every row as  <name>_def
-param_def <- read.csv(
-  file = here("data", "Parameters.csv"),
-  row.names = 1
-)[1:3]
 
-for (i in row.names(param_def)) {
-  assign(paste(i, "def", sep = "_"), param_def[i, "POINT"])
+#' Read a Parameters CSV into a named list.
+#'
+#' Values are matched by the PARAMETER column, never by position, and the
+#' UTF-8 byte-order mark in the CSV header is handled.
+#'
+#' @param csv     Path to a Parameters CSV (columns PARAMETER, POINT, LOWER,
+#'                UPPER).
+#' @param column  Which value column to read ("POINT", "LOWER" or "UPPER").
+#' @return Named list: one numeric element per PARAMETER row.
+load_params <- function(csv, column = "POINT") {
+  tbl <- read.csv(file = csv, fileEncoding = "UTF-8-BOM")
+  stopifnot(
+    "PARAMETER" %in% names(tbl),
+    column %in% names(tbl),
+    !anyDuplicated(tbl$PARAMETER)
+  )
+  as.list(setNames(tbl[[column]], tbl$PARAMETER))
 }
 
-# ----- Colour palettes and ggplot scales --------------------------------------
-library(ggsci) # pal_igv
-library(viridis) # turbo
+# Named list of POINT estimates by PARAMETER name, e.g. params_def$p_HCC.
+params_def <- load_params(here("data", "Parameters.csv"))
 
-my_pal <- pal_igv("default")(7)
-names(my_pal) <- c(
-  "Cirrhosis",
-  "Mortality",
-  "BCLC 0",
-  "BCLC A",
-  "BCLC D",
-  "BCLC B",
-  "BCLC C"
-)
-
+# ----- Line types, colour palette and ggplot scales ---------------------------
 my_linet <- as.vector(c(
   "solid",
   "solid",
@@ -92,47 +90,54 @@ my_line <- scale_linetype_manual(
 )
 
 # ----- Shared axis / legend labels --------------------------------------------
+
+#' Build one LaTeX label expression, e.g. \\textit{p}_{CA}.
+#'
+#' @param base    Symbol before the subscript (e.g. "p", "L", "Sym").
+#' @param sub     Subscript text (LaTeX, e.g. "CA" or "\\alpha").
+#' @param italic  Wrap `base` in \\textit{}? (p_*, L_*, m, D are italic.)
+#' @param star    Add the bootstrap-replicate superscript `*`?
+#' @return A plotmath expression from latex2exp::TeX().
+tex_label <- function(base, sub, italic = TRUE, star = FALSE) {
+  b <- if (italic) paste0("\\textit{", base, "}") else base
+  sup <- if (star) "^{*}" else ""
+  TeX(paste0("$", b, sup, "_{", sub, "}$"))
+}
+
 # TeX_labels: parameter names as LaTeX expressions (used in multiple scripts)
-TeX_labels <- c(
-  "L_0" = TeX(r"($\textit{L}_{0}$)"),
-  "L_A" = TeX(r"($\textit{L}_{A}$)"),
-  "L_B" = TeX(r"($\textit{L}_{B}$)"),
-  "L_C" = TeX(r"($\textit{L}_{C}$)"),
-  "L_D" = TeX(r"($\textit{L}_{D}$)"),
-  "p_CA" = TeX(r"($\textit{p}_{CA}$)"),
-  "p_NA" = expression(italic(p)[`NA`]),
-  "p_Att" = TeX(r"($\textit{p}_{Att}$)"),
-  "p_HCC" = TeX(r"($\textit{p}_{HCC}$)"),
-  "p_0" = TeX(r"($\textit{p}_{0}$)"),
-  "p_A" = TeX(r"($\textit{p}_{A}$)"),
-  "p_B" = TeX(r"($\textit{p}_{C}$)"),
-  "p_C" = TeX(r"($\textit{p}_{C}$)"),
-  "p_D" = TeX(r"($\textit{p}_{D}$)"),
-  "Sym_0" = TeX(r"($Sym_{0}$)"),
-  "Sym_A" = TeX(r"($Sym_{A}$)"),
-  "Sym_B" = TeX(r"($Sym_{B}$)"),
-  "Sym_C" = TeX(r"($Sym_{C}$)"),
-  "Sym_D" = TeX(r"($Sym_{D}$)"),
-  "Sens_0" = TeX(r"($Sens_{0}$)"),
-  "Sens_A" = TeX(r"($Sens_{A}$)"),
-  "Sens_B" = TeX(r"($Sens_{B}$)"),
-  "Sens_C" = TeX(r"($Sens_{C}$)"),
-  "Sens_D" = TeX(r"($Sens_{D}$)")
-)
+tex_param_names <- names(params_def)
+TeX_labels <- lapply(tex_param_names, function(nm) {
+  parts <- strsplit(nm, "_", fixed = TRUE)[[1]]
+  if (nm == "p_NA") {
+    # `NA` needs backticks in plotmath, so TeX() cannot be used here
+    return(expression(italic(p)[`NA`]))
+  }
+  if (nm == "p_B") {
+    # G2: preserved bug, p_B renders as p_C
+    parts <- c("p", "C")
+  }
+  tex_label(parts[1], parts[2], italic = parts[1] %in% c("p", "L"))
+})
+TeX_labels <- do.call(c, TeX_labels) # expression vector, as before
+names(TeX_labels) <- tex_param_names
 
 # Boot_labels: bootstrap parameter names as LaTeX expressions
-Boot_labels <- c(
-  "m_0" = TeX(r"($\textit{m}^{*}_{0}$)"),
-  "m_A" = TeX(r"($\textit{m}^{*}_{A}$)"),
-  "m_B" = TeX(r"($\textit{m}^{*}_{B}$)"),
-  "m_C" = TeX(r"($\textit{m}^{*}_{C}$)"),
-  "m_D" = TeX(r"($\textit{m}^{*}_{D}$)"),
-  "D_0" = TeX(r"($\textit{D}^{*}_{0}$)"),
-  "D_A" = TeX(r"($\textit{D}^{*}_{A}$)"),
-  "D_alpha" = TeX(r"($\textit{D}^{*}_{\alpha}$)"),
-  "p_0" = TeX(r"($\textit{p}^{*}_{0}$)"),
-  "p_A" = TeX(r"($\textit{p}^{*}_{A}$)"),
-  "p_B" = TeX(r"($\textit{p}^{*}_{B}$)"),
-  "p_C" = TeX(r"($\textit{p}^{*}_{C}$)"),
-  "p_D" = TeX(r"($\textit{p}^{*}_{D}$)")
+boot_specs <- list(
+  m = c("0", "A", "B", "C", "D"),
+  D = c("0", "A", "alpha"),
+  p = c("0", "A", "B", "C", "D")
+)
+Boot_labels <- do.call(
+  c,
+  unlist(
+    lapply(names(boot_specs), function(base) {
+      lapply(
+        setNames(boot_specs[[base]], paste0(base, "_", boot_specs[[base]])),
+        function(sub) {
+          tex_label(base, if (sub == "alpha") "\\alpha" else sub, star = TRUE)
+        }
+      )
+    }),
+    recursive = FALSE
+  )
 )

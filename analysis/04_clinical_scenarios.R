@@ -39,70 +39,70 @@ message("  Baseline  = ", round(Baseline, 5))
 
 # ----- Scenario 1: Realistic adherence improvement ---------------------------
 scen_1a <- life_add(
-  p_NA = p_NA_def - 0.05,
-  p_CA = p_CA_def + 0.10,
-  p_Att = p_Att_def + 0.10,
-  Sens_0 = Sens_0_def,
-  Sens_A = Sens_A_def,
-  Sens_B = Sens_B_def,
-  Sens_C = Sens_C_def,
-  Sens_D = Sens_D_def,
-  L_0 = L_0_def,
-  L_A = L_A_def,
-  L_B = L_B_def,
-  L_C = L_C_def,
-  L_D = L_D_def
+  p_NA = params_def$p_NA - 0.05,
+  p_CA = params_def$p_CA + 0.10,
+  p_Att = params_def$p_Att + 0.10,
+  Sens_0 = params_def$Sens_0,
+  Sens_A = params_def$Sens_A,
+  Sens_B = params_def$Sens_B,
+  Sens_C = params_def$Sens_C,
+  Sens_D = params_def$Sens_D,
+  L_0 = params_def$L_0,
+  L_A = params_def$L_A,
+  L_B = params_def$L_B,
+  L_C = params_def$L_C,
+  L_D = params_def$L_D
 )
 
 # ----- Scenario 2: Optimistic adherence improvement --------------------------
 scen_1b <- life_add(
-  p_NA = p_NA_def - 0.10,
-  p_CA = p_CA_def + 0.15,
-  p_Att = p_Att_def + 0.20,
-  Sens_0 = Sens_0_def,
-  Sens_A = Sens_A_def,
-  Sens_B = Sens_B_def,
-  Sens_C = Sens_C_def,
-  Sens_D = Sens_D_def,
-  L_0 = L_0_def,
-  L_A = L_A_def,
-  L_B = L_B_def,
-  L_C = L_C_def,
-  L_D = L_D_def
+  p_NA = params_def$p_NA - 0.10,
+  p_CA = params_def$p_CA + 0.15,
+  p_Att = params_def$p_Att + 0.20,
+  Sens_0 = params_def$Sens_0,
+  Sens_A = params_def$Sens_A,
+  Sens_B = params_def$Sens_B,
+  Sens_C = params_def$Sens_C,
+  Sens_D = params_def$Sens_D,
+  L_0 = params_def$L_0,
+  L_A = params_def$L_A,
+  L_B = params_def$L_B,
+  L_C = params_def$L_C,
+  L_D = params_def$L_D
 )
 
 # ----- Scenario 3: Improved ultrasound sensitivity ---------------------------
 scen_2 <- life_add(
-  p_NA = p_NA_def,
-  p_CA = p_CA_def,
-  p_Att = p_Att_def,
-  Sens_0 = Sens_0_def + 0.05,
-  Sens_A = Sens_A_def + 0.05,
-  Sens_B = Sens_B_def + 0.05,
-  Sens_C = Sens_C_def,
-  Sens_D = Sens_D_def,
-  L_0 = L_0_def,
-  L_A = L_A_def,
-  L_B = L_B_def,
-  L_C = L_C_def,
-  L_D = L_D_def
+  p_NA = params_def$p_NA,
+  p_CA = params_def$p_CA,
+  p_Att = params_def$p_Att,
+  Sens_0 = params_def$Sens_0 + 0.05,
+  Sens_A = params_def$Sens_A + 0.05,
+  Sens_B = params_def$Sens_B + 0.05,
+  Sens_C = params_def$Sens_C,
+  Sens_D = params_def$Sens_D,
+  L_0 = params_def$L_0,
+  L_A = params_def$L_A,
+  L_B = params_def$L_B,
+  L_C = params_def$L_C,
+  L_D = params_def$L_D
 )
 
 # ----- Scenario 4: Better treatments -----------------------------------------
 scen_3 <- life_add(
-  p_NA = p_NA_def,
-  p_CA = p_CA_def,
-  p_Att = p_Att_def,
-  Sens_0 = Sens_0_def,
-  Sens_A = Sens_A_def,
-  Sens_B = Sens_B_def,
-  Sens_C = Sens_C_def,
-  Sens_D = Sens_D_def,
-  L_0 = L_0_def,
-  L_A = L_A_def + 1,
-  L_B = L_B_def + 0.5,
-  L_C = L_C_def + 0.5,
-  L_D = L_D_def
+  p_NA = params_def$p_NA,
+  p_CA = params_def$p_CA,
+  p_Att = params_def$p_Att,
+  Sens_0 = params_def$Sens_0,
+  Sens_A = params_def$Sens_A,
+  Sens_B = params_def$Sens_B,
+  Sens_C = params_def$Sens_C,
+  Sens_D = params_def$Sens_D,
+  L_0 = params_def$L_0,
+  L_A = params_def$L_A + 1,
+  L_B = params_def$L_B + 0.5,
+  L_C = params_def$L_C + 0.5,
+  L_D = params_def$L_D
 )
 
 # ----- Load bootstrap outputs -------------------------------------------------
@@ -295,10 +295,13 @@ ggsave(
 # ----- Diminishing returns: adherence -----------------------------------------
 `Partial Adherence Attendence` <- map_dbl(
   0:50 / 100,
-  ~ life_add(p_Att = p_Att_def + .x)
+  ~ life_add(p_Att = params_def$p_Att + .x)
 )
-`Non-Adherence` <- map_dbl(0:30 / 100, ~ life_add(p_NA = p_NA_def - .x))
-`Complete Adherence` <- map_dbl(0:40 / 100, ~ life_add(p_CA = p_CA_def + .x))
+`Non-Adherence` <- map_dbl(0:30 / 100, ~ life_add(p_NA = params_def$p_NA - .x))
+`Complete Adherence` <- map_dbl(
+  0:40 / 100,
+  ~ life_add(p_CA = params_def$p_CA + .x)
+)
 
 adh_inc_tbl <- tibble(`Percent change in Category` = 0:50 / 100) %>%
   merge(
@@ -349,9 +352,9 @@ ggsave(
 )
 
 # ----- Diminishing returns: ultrasound sensitivity ---------------------------
-`BCLC 0` <- map_dbl(0:50 / 100, ~ life_add(Sens_0 = Sens_0_def + .x))
-`BCLC A` <- map_dbl(0:30 / 100, ~ life_add(Sens_A = Sens_A_def + .x))
-`BCLC B` <- map_dbl(0:15 / 100, ~ life_add(Sens_B = Sens_B_def + .x))
+`BCLC 0` <- map_dbl(0:50 / 100, ~ life_add(Sens_0 = params_def$Sens_0 + .x))
+`BCLC A` <- map_dbl(0:30 / 100, ~ life_add(Sens_A = params_def$Sens_A + .x))
+`BCLC B` <- map_dbl(0:15 / 100, ~ life_add(Sens_B = params_def$Sens_B + .x))
 
 US_inc_tbl <- tibble(`Increase in Sensitivity` = 0:50 / 100) %>%
   merge(
@@ -395,145 +398,145 @@ ggsave(
 )
 
 # ----- Scenarios under alternative HCC risk assumptions ----------------------
-Baseline_low_risk <- life_add(p_HCC = p_HCC_def / 2)
-Baseline_high_risk <- life_add(p_HCC = p_HCC_def * 2)
+Baseline_low_risk <- life_add(p_HCC = params_def$p_HCC / 2)
+Baseline_high_risk <- life_add(p_HCC = params_def$p_HCC * 2)
 
 # Low-risk scenario calculations
 scen_1a_low_risk <- life_add(
-  p_HCC = p_HCC_def / 2,
-  p_NA = p_NA_def - 0.05,
-  p_CA = p_CA_def + 0.1,
-  p_Att = p_Att_def + 0.1,
-  Sens_0 = Sens_0_def,
-  Sens_A = Sens_A_def,
-  Sens_B = Sens_B_def,
-  Sens_C = Sens_C_def,
-  Sens_D = Sens_D_def,
-  L_0 = L_0_def,
-  L_A = L_A_def,
-  L_B = L_B_def,
-  L_C = L_C_def,
-  L_D = L_D_def
+  p_HCC = params_def$p_HCC / 2,
+  p_NA = params_def$p_NA - 0.05,
+  p_CA = params_def$p_CA + 0.1,
+  p_Att = params_def$p_Att + 0.1,
+  Sens_0 = params_def$Sens_0,
+  Sens_A = params_def$Sens_A,
+  Sens_B = params_def$Sens_B,
+  Sens_C = params_def$Sens_C,
+  Sens_D = params_def$Sens_D,
+  L_0 = params_def$L_0,
+  L_A = params_def$L_A,
+  L_B = params_def$L_B,
+  L_C = params_def$L_C,
+  L_D = params_def$L_D
 )
 
 scen_1b_low_risk <- life_add(
-  p_HCC = p_HCC_def / 2,
-  p_NA = p_NA_def - 0.1,
-  p_CA = p_CA_def + 0.15,
-  p_Att = p_Att_def + 0.2,
-  Sens_0 = Sens_0_def,
-  Sens_A = Sens_A_def,
-  Sens_B = Sens_B_def,
-  Sens_C = Sens_C_def,
-  Sens_D = Sens_D_def,
-  L_0 = L_0_def,
-  L_A = L_A_def,
-  L_B = L_B_def,
-  L_C = L_C_def,
-  L_D = L_D_def
+  p_HCC = params_def$p_HCC / 2,
+  p_NA = params_def$p_NA - 0.1,
+  p_CA = params_def$p_CA + 0.15,
+  p_Att = params_def$p_Att + 0.2,
+  Sens_0 = params_def$Sens_0,
+  Sens_A = params_def$Sens_A,
+  Sens_B = params_def$Sens_B,
+  Sens_C = params_def$Sens_C,
+  Sens_D = params_def$Sens_D,
+  L_0 = params_def$L_0,
+  L_A = params_def$L_A,
+  L_B = params_def$L_B,
+  L_C = params_def$L_C,
+  L_D = params_def$L_D
 )
 
 scen_2_low_risk <- life_add(
-  p_HCC = p_HCC_def / 2,
-  p_NA = p_NA_def,
-  p_CA = p_CA_def,
-  p_Att = p_Att_def,
-  Sens_0 = Sens_0_def + 0.05,
-  Sens_A = Sens_A_def + 0.05,
-  Sens_B = Sens_B_def + 0.05,
-  Sens_C = Sens_C_def,
-  Sens_D = Sens_D_def,
-  L_0 = L_0_def,
-  L_A = L_A_def,
-  L_B = L_B_def,
-  L_C = L_C_def,
-  L_D = L_D_def
+  p_HCC = params_def$p_HCC / 2,
+  p_NA = params_def$p_NA,
+  p_CA = params_def$p_CA,
+  p_Att = params_def$p_Att,
+  Sens_0 = params_def$Sens_0 + 0.05,
+  Sens_A = params_def$Sens_A + 0.05,
+  Sens_B = params_def$Sens_B + 0.05,
+  Sens_C = params_def$Sens_C,
+  Sens_D = params_def$Sens_D,
+  L_0 = params_def$L_0,
+  L_A = params_def$L_A,
+  L_B = params_def$L_B,
+  L_C = params_def$L_C,
+  L_D = params_def$L_D
 )
 
 scen_3_low_risk <- life_add(
-  p_HCC = p_HCC_def / 2,
-  p_NA = p_NA_def,
-  p_CA = p_CA_def,
-  p_Att = p_Att_def,
-  Sens_0 = Sens_0_def,
-  Sens_A = Sens_A_def,
-  Sens_B = Sens_B_def,
-  Sens_C = Sens_C_def,
-  Sens_D = Sens_D_def,
-  L_0 = L_0_def,
-  L_A = L_A_def + 1,
-  L_B = L_B_def + 0.5,
-  L_C = L_C_def + 0.5,
-  L_D = L_D_def
+  p_HCC = params_def$p_HCC / 2,
+  p_NA = params_def$p_NA,
+  p_CA = params_def$p_CA,
+  p_Att = params_def$p_Att,
+  Sens_0 = params_def$Sens_0,
+  Sens_A = params_def$Sens_A,
+  Sens_B = params_def$Sens_B,
+  Sens_C = params_def$Sens_C,
+  Sens_D = params_def$Sens_D,
+  L_0 = params_def$L_0,
+  L_A = params_def$L_A + 1,
+  L_B = params_def$L_B + 0.5,
+  L_C = params_def$L_C + 0.5,
+  L_D = params_def$L_D
 )
 
 # High-risk scenario calculations
 scen_1a_high_risk <- life_add(
-  p_HCC = p_HCC_def * 2,
-  p_NA = p_NA_def - 0.05,
-  p_CA = p_CA_def + 0.1,
-  p_Att = p_Att_def + 0.1,
-  Sens_0 = Sens_0_def,
-  Sens_A = Sens_A_def,
-  Sens_B = Sens_B_def,
-  Sens_C = Sens_C_def,
-  Sens_D = Sens_D_def,
-  L_0 = L_0_def,
-  L_A = L_A_def,
-  L_B = L_B_def,
-  L_C = L_C_def,
-  L_D = L_D_def
+  p_HCC = params_def$p_HCC * 2,
+  p_NA = params_def$p_NA - 0.05,
+  p_CA = params_def$p_CA + 0.1,
+  p_Att = params_def$p_Att + 0.1,
+  Sens_0 = params_def$Sens_0,
+  Sens_A = params_def$Sens_A,
+  Sens_B = params_def$Sens_B,
+  Sens_C = params_def$Sens_C,
+  Sens_D = params_def$Sens_D,
+  L_0 = params_def$L_0,
+  L_A = params_def$L_A,
+  L_B = params_def$L_B,
+  L_C = params_def$L_C,
+  L_D = params_def$L_D
 )
 
 scen_1b_high_risk <- life_add(
-  p_HCC = p_HCC_def * 2,
-  p_NA = p_NA_def - 0.1,
-  p_CA = p_CA_def + 0.15,
-  p_Att = p_Att_def + 0.2,
-  Sens_0 = Sens_0_def,
-  Sens_A = Sens_A_def,
-  Sens_B = Sens_B_def,
-  Sens_C = Sens_C_def,
-  Sens_D = Sens_D_def,
-  L_0 = L_0_def,
-  L_A = L_A_def,
-  L_B = L_B_def,
-  L_C = L_C_def,
-  L_D = L_D_def
+  p_HCC = params_def$p_HCC * 2,
+  p_NA = params_def$p_NA - 0.1,
+  p_CA = params_def$p_CA + 0.15,
+  p_Att = params_def$p_Att + 0.2,
+  Sens_0 = params_def$Sens_0,
+  Sens_A = params_def$Sens_A,
+  Sens_B = params_def$Sens_B,
+  Sens_C = params_def$Sens_C,
+  Sens_D = params_def$Sens_D,
+  L_0 = params_def$L_0,
+  L_A = params_def$L_A,
+  L_B = params_def$L_B,
+  L_C = params_def$L_C,
+  L_D = params_def$L_D
 )
 
 scen_2_high_risk <- life_add(
-  p_HCC = p_HCC_def * 2,
-  p_NA = p_NA_def,
-  p_CA = p_CA_def,
-  p_Att = p_Att_def,
-  Sens_0 = Sens_0_def + 0.05,
-  Sens_A = Sens_A_def + 0.05,
-  Sens_B = Sens_B_def + 0.05,
-  Sens_C = Sens_C_def,
-  Sens_D = Sens_D_def,
-  L_0 = L_0_def,
-  L_A = L_A_def,
-  L_B = L_B_def,
-  L_C = L_C_def,
-  L_D = L_D_def
+  p_HCC = params_def$p_HCC * 2,
+  p_NA = params_def$p_NA,
+  p_CA = params_def$p_CA,
+  p_Att = params_def$p_Att,
+  Sens_0 = params_def$Sens_0 + 0.05,
+  Sens_A = params_def$Sens_A + 0.05,
+  Sens_B = params_def$Sens_B + 0.05,
+  Sens_C = params_def$Sens_C,
+  Sens_D = params_def$Sens_D,
+  L_0 = params_def$L_0,
+  L_A = params_def$L_A,
+  L_B = params_def$L_B,
+  L_C = params_def$L_C,
+  L_D = params_def$L_D
 )
 
 scen_3_high_risk <- life_add(
-  p_HCC = p_HCC_def * 2,
-  p_NA = p_NA_def,
-  p_CA = p_CA_def,
-  p_Att = p_Att_def,
-  Sens_0 = Sens_0_def,
-  Sens_A = Sens_A_def,
-  Sens_B = Sens_B_def,
-  Sens_C = Sens_C_def,
-  Sens_D = Sens_D_def,
-  L_0 = L_0_def,
-  L_A = L_A_def + 1,
-  L_B = L_B_def + 0.5,
-  L_C = L_C_def + 0.5,
-  L_D = L_D_def
+  p_HCC = params_def$p_HCC * 2,
+  p_NA = params_def$p_NA,
+  p_CA = params_def$p_CA,
+  p_Att = params_def$p_Att,
+  Sens_0 = params_def$Sens_0,
+  Sens_A = params_def$Sens_A,
+  Sens_B = params_def$Sens_B,
+  Sens_C = params_def$Sens_C,
+  Sens_D = params_def$Sens_D,
+  L_0 = params_def$L_0,
+  L_A = params_def$L_A + 1,
+  L_B = params_def$L_B + 0.5,
+  L_C = params_def$L_C + 0.5,
+  L_D = params_def$L_D
 )
 
 # ----- Low-risk scenario plot ------------------------------------------------

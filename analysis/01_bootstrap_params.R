@@ -391,7 +391,7 @@ US_sensitivity_Cal <- ggplot(resampled_pars, aes(x = Sens_0, y = Sens_A)) +
     limits = c(0, 1)
   ) +
   geom_point(
-    aes(x = Sens_0_def, y = Sens_A_def),
+    aes(x = params_def$Sens_0, y = params_def$Sens_A),
     shape = 4,
     stroke = 1,
     size = 1,
@@ -445,21 +445,45 @@ resampled_pars <- resampled_pars %>%
     scen_2 = pmap_dbl(., scen_2_fun),
     scen_3 = pmap_dbl(., scen_3_fun),
     Baseline_low_risk = pmap_dbl(
-      mutate(., p_HCC = p_HCC_def / 2),
+      mutate(., p_HCC = params_def$p_HCC / 2),
       base_scen_fun
     ),
-    scen_1a_low_risk = pmap_dbl(mutate(., p_HCC = p_HCC_def / 2), scen_1a_fun),
-    scen_1b_low_risk = pmap_dbl(mutate(., p_HCC = p_HCC_def / 2), scen_1b_fun),
-    scen_2_low_risk = pmap_dbl(mutate(., p_HCC = p_HCC_def / 2), scen_2_fun),
-    scen_3_low_risk = pmap_dbl(mutate(., p_HCC = p_HCC_def / 2), scen_3_fun),
+    scen_1a_low_risk = pmap_dbl(
+      mutate(., p_HCC = params_def$p_HCC / 2),
+      scen_1a_fun
+    ),
+    scen_1b_low_risk = pmap_dbl(
+      mutate(., p_HCC = params_def$p_HCC / 2),
+      scen_1b_fun
+    ),
+    scen_2_low_risk = pmap_dbl(
+      mutate(., p_HCC = params_def$p_HCC / 2),
+      scen_2_fun
+    ),
+    scen_3_low_risk = pmap_dbl(
+      mutate(., p_HCC = params_def$p_HCC / 2),
+      scen_3_fun
+    ),
     Baseline_high_risk = pmap_dbl(
-      mutate(., p_HCC = p_HCC_def * 2),
+      mutate(., p_HCC = params_def$p_HCC * 2),
       base_scen_fun
     ),
-    scen_1a_high_risk = pmap_dbl(mutate(., p_HCC = p_HCC_def * 2), scen_1a_fun),
-    scen_1b_high_risk = pmap_dbl(mutate(., p_HCC = p_HCC_def * 2), scen_1b_fun),
-    scen_2_high_risk = pmap_dbl(mutate(., p_HCC = p_HCC_def * 2), scen_2_fun),
-    scen_3_high_risk = pmap_dbl(mutate(., p_HCC = p_HCC_def * 2), scen_3_fun)
+    scen_1a_high_risk = pmap_dbl(
+      mutate(., p_HCC = params_def$p_HCC * 2),
+      scen_1a_fun
+    ),
+    scen_1b_high_risk = pmap_dbl(
+      mutate(., p_HCC = params_def$p_HCC * 2),
+      scen_1b_fun
+    ),
+    scen_2_high_risk = pmap_dbl(
+      mutate(., p_HCC = params_def$p_HCC * 2),
+      scen_2_fun
+    ),
+    scen_3_high_risk = pmap_dbl(
+      mutate(., p_HCC = params_def$p_HCC * 2),
+      scen_3_fun
+    )
   )
 
 head(resampled_pars)
@@ -576,7 +600,7 @@ ggplot(resampled_pars, aes(x = Baseline)) +
 # ----- Sensitivity / uncertainty analysis with partial correlation ------------
 library(ppcor)
 
-pars_def <- resampled_pars %>%
+pars_wide <- resampled_pars %>%
   dplyr::select(1:8, Baseline)
 
 pars_logit <- resampled_pars %>%
@@ -584,21 +608,21 @@ pars_logit <- resampled_pars %>%
   mutate(across(-Baseline, Logit))
 
 pairs(head(pars_logit, 1000))
-pairs(head(pars_def, 1000))
+pairs(head(pars_wide, 1000))
 
-lm_def <- lm(
-  pars_def$Baseline ~ .,
-  data = pars_def %>% dplyr::select(-Baseline)
+lm_fit <- lm(
+  pars_wide$Baseline ~ .,
+  data = pars_wide %>% dplyr::select(-Baseline)
 )
 lm_logit <- lm(
   pars_logit$Baseline ~ .,
   data = pars_logit %>% dplyr::select(-Baseline)
 )
 
-summary.lm(lm_def)$r.squared
+summary.lm(lm_fit)$r.squared
 summary.lm(lm_logit)$r.squared
 
-cor_matrix <- cor(pars_def)
+cor_matrix <- cor(pars_wide)
 cor_matrix_logit <- cor(pars_logit)
 pcor_matrix_logit <- pcor(pars_logit)$estimate
 
@@ -896,7 +920,7 @@ US_sensitivity_Cal_side_labs <- ggplot(
     limits = c(0, 1)
   ) +
   geom_point(
-    aes(x = Sens_0_def, y = Sens_A_def),
+    aes(x = params_def$Sens_0, y = params_def$Sens_A),
     shape = 4,
     stroke = 1,
     size = 1,

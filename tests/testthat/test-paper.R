@@ -9,24 +9,24 @@ q <- function(x, p) unname(quantile(x, p))
 test_that("Abstract / Sec 3.3 scenario point estimates", {
   pts <- c(
     realistic = life_add(
-      p_NA = p_NA_def - 0.05,
-      p_CA = p_CA_def + 0.10,
-      p_Att = p_Att_def + 0.10
+      p_NA = params_def$p_NA - 0.05,
+      p_CA = params_def$p_CA + 0.10,
+      p_Att = params_def$p_Att + 0.10
     ),
     optimistic = life_add(
-      p_NA = p_NA_def - 0.10,
-      p_CA = p_CA_def + 0.15,
-      p_Att = p_Att_def + 0.20
+      p_NA = params_def$p_NA - 0.10,
+      p_CA = params_def$p_CA + 0.15,
+      p_Att = params_def$p_Att + 0.20
     ),
     diagnosis = life_add(
-      Sens_0 = Sens_0_def + 0.05,
-      Sens_A = Sens_A_def + 0.05,
-      Sens_B = Sens_B_def + 0.05
+      Sens_0 = params_def$Sens_0 + 0.05,
+      Sens_A = params_def$Sens_A + 0.05,
+      Sens_B = params_def$Sens_B + 0.05
     ),
     treatment = life_add(
-      L_A = L_A_def + 1,
-      L_B = L_B_def + 0.5,
-      L_C = L_C_def + 0.5
+      L_A = params_def$L_A + 1,
+      L_B = params_def$L_B + 0.5,
+      L_C = params_def$L_C + 0.5
     )
   ) -
     base_la

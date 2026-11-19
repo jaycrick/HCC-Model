@@ -22,16 +22,12 @@ source(here::here("R", "progression.R"))
 library(RColorBrewer)
 library(ggthemes)
 library(gridExtra)
-library(mc2d) # rpert()
 library(magrittr)
 
 dir.create(here("figures"), showWarnings = FALSE)
 
 # ----- Bootstrap parameter draws ----------------------------------------------
 resampled_pars <- readRDS(here("data-derived", "resampled_pars_fin.rds"))
-
-# ----- Randomised parameter draws for PSA range ------------------------------
-random_vars <- ran_vars(x = 100)
 
 # ----- Stage distribution across a range of HCC risk ------------------------
 plot_untreated_risk_10_years <- risk_no_int(100, 10)
@@ -48,7 +44,7 @@ plot_partial_adherence_10_years <- pafunc(10)
 # ----- Attendance probability vs life years (inline analysis) ----------------
 p_Att <- (0:20) / 20
 tempfun <- function(p)
-  pmap_dbl(resampled_pars, p_NA = 0, p_CA = 0, p_Att = p, life_add)
+  pmap_dbl(draws(resampled_pars), p_NA = 0, p_CA = 0, p_Att = p, life_add)
 testyll <- map_dbl(p_Att, ~ life_add(p_Att = .x, p_NA = 0, p_CA = 0))
 rand_list <- map(p_Att, tempfun)
 saveddf <- tibble(p_Att, testyll, rand_list) %>%

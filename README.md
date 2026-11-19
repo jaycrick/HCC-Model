@@ -119,8 +119,8 @@ Rscript run_all.R --bootstrap
 To explore or modify the model outside the pipeline, source the two core files and call functions directly:
 
 ```r
-source("R/setup.R")      # loads packages, reads Parameters.csv, sets *_def globals
-source("R/model_core.R") # defines fromf4(), us_theor_pa(), adh_theor(), life_add()
+source("R/setup.R")      # loads packages; reads Parameters.csv into `params_def`
+source("R/model_core.R") # defines progress_untreated(), screen_cohort(), screen_by_adherence(), life_add()
 
 # Life-years gained under default parameters (current practice)
 life_add()
@@ -137,17 +137,24 @@ life_add(m = 3)
 life_add(p_CA = 0.5)
 ```
 
-`life_add()` accepts any combination of the model's ~25 parameters as named arguments;
-all default to the `*_def` point estimates read from `data/Parameters.csv`.
+`life_add()` accepts any combination of the model's 24 parameters as named arguments;
+all default to the point estimates in `params_def` (read from `data/Parameters.csv`).
+Unknown names are an error (e.g. `life_add(p_att = 1)`), and `n`, `t`, `m` and `params` are
+ordinary named arguments. To run on a different parameter set, pass
+`params = modify_params(params_def, list(p_HCC = 0.03))` or `load_params(csv)`.
 
 Key functions:
 
 | Function | Purpose |
 |----------|---------|
-| `fromf4(n, t, ...)` | Markov progression for `n` people over `t` months |
-| `us_theor_pa(n, t, m, Pr_Att, ...)` | Ultrasound detection for a single adherence group |
-| `adh_theor(n, t, m, p_NA, p_CA, p_Att, ...)` | Detection across all three adherence groups |
-| `life_add(...)` | Total life-years gained; wraps `adh_theor` |
+| `load_params(csv, column)` | Read a Parameters CSV into a named list (by `PARAMETER` name) |
+| `modify_params(params, overrides)` | Override named parameters; errors on unknown names |
+| `annual_to_monthly(p)` | Convert an annual probability to monthly |
+| `transition_matrix(p_HCC_month, p_stage)` | The 7x7 monthly transition matrix |
+| `progress_untreated(..., n, t, params)` | Markov progression of an untreated cohort over `t` months |
+| `screen_cohort(Pr_Att, ..., n, t, m, params)` | Ultrasound detection for one adherence group; returns `list(dx, undiagnosed)` |
+| `screen_by_adherence(..., n, t, m, params)` | Detection across all three adherence groups |
+| `life_add(..., n, t, m, params)` | Total life-years gained; wraps `screen_by_adherence` |
 | `life_tibble(csv)` | Builds parameter sweep tibble for sensitivity tornado plots |
 
 ---

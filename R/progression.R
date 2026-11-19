@@ -4,62 +4,6 @@
 # one or more ggplots, saves them to figures/, and returns the primary plot.
 # Requires: R/setup.R, R/model_core.R, and resampled_pars in the environment.
 
-# ----- Randomised PSA parameter draws ----------------------------------------
-
-#' Draw n randomised parameter sets using PERT distributions.
-#'
-#' @param x       Number of draws.
-#' @param ignore  Character vector of parameter names to drop (e.g. "p_HCC").
-#' @return List of x one-row tibbles, each a full parameter set.
-ran_vars <- function(x = 1, ignore = NULL) {
-  rtbls <- vector("list", length = x)
-
-  for (i in 1:x) {
-    rparam_tbl <- as_tibble(param_def) %>%
-      rowwise() %>%
-      mutate(
-        new = if (LOWER == UPPER) POINT else rpert(1, LOWER, POINT, UPPER)
-      ) %>%
-      ungroup() %>%
-      bind_cols(
-        Stage = c(
-          "p_HCC",
-          "p_0",
-          "p_A",
-          "p_B",
-          "p_C",
-          "p_D",
-          "Sens_0",
-          "Sens_A",
-          "Sens_B",
-          "Sens_C",
-          "Sens_D",
-          "p_NA",
-          "p_CA",
-          "p_Att",
-          "L_0",
-          "L_A",
-          "L_B",
-          "L_C",
-          "L_D",
-          "Sym_0",
-          "Sym_A",
-          "Sym_B",
-          "Sym_C",
-          "Sym_D"
-        )
-      )
-
-    rtbls[[i]] <- dfs(
-      Parameter = rparam_tbl$Stage,
-      value = rparam_tbl$new
-    ) %>%
-      select(!all_of(ignore))
-  }
-  return(rtbls)
-}
-
-
 # ----- Distribution of BCLC stages across a range of HCC risk ----------------
 
 #' Plot HCC stage distribution over a range of annual HCC risk levels.
@@ -69,7 +13,10 @@ ran_vars <- function(x = 1, ignore = NULL) {
 risk_no_int <- function(n, y) {
   risk <- seq(0, 0.08, length.out = 1000)
 
-  my_tbl <- map_dfr(risk, ~ fromf4(n = 100, t = y * 12, p_HCC = .x)) %>%
+  my_tbl <- map_dfr(
+    risk,
+    ~ progress_untreated(n = 100, t = y * 12, p_HCC = .x)
+  ) %>%
     tibble(`Annual HCC Risk Profile` = risk, .) %>%
     pivot_longer(
       c(Cirrhosis:Mortality),
@@ -151,7 +98,7 @@ risk_no_int <- function(n, y) {
 years_no_int <- function(y) {
   months <- 0:(y * 12)
 
-  my_tbl <- map_dfr(months, ~ fromf4(n = 100, t = .x)) %>%
+  my_tbl <- map_dfr(months, ~ progress_untreated(n = 100, t = .x)) %>%
     tibble(Years = months / 12, .) %>%
     pivot_longer(
       c(Cirrhosis:Mortality),
@@ -206,7 +153,7 @@ years_no_int <- function(y) {
       ),
       caption = paste(
         "With the assumption no-one has\nHCC at the start of the model and a",
-        p_HCC_def,
+        params_def$p_HCC,
         "annual HCC risk"
       )
     )
@@ -236,7 +183,8 @@ years_no_int <- function(y) {
 #'   versions to figures/.
 usfreq_graph <- function(y) {
   usfreq <- 1:24
-  tempfun <- function(m) pmap_dbl(resampled_pars, m = m, t = y * 12, life_add)
+  tempfun <- function(m)
+    pmap_dbl(draws(resampled_pars), m = m, t = y * 12, life_add)
   testyll <- map_dbl(usfreq, ~ life_add(m = .x, t = y * 12))
   rand_list <- map(usfreq, tempfun)
   saveddf <- tibble(usfreq, testyll, rand_list) %>%
@@ -312,9 +260,9 @@ usfreq_graph <- function(y) {
 #' @param y  Horizon in years.
 #' @return ggplot object; also saves to figures/.
 pafunc <- function(y) {
-  probs <- seq(0, 1 - p_NA_def, length.out = 50)
+  probs <- seq(0, 1 - params_def$p_NA, length.out = 50)
   tempfun <- function(p)
-    pmap_dbl(resampled_pars, p_CA = p, t = y * 12, life_add)
+    pmap_dbl(draws(resampled_pars), p_CA = p, t = y * 12, life_add)
   testyll <- map_dbl(probs, ~ life_add(p_CA = .x, t = y * 12))
   rand_list <- map(probs, tempfun)
   saveddf <- tibble(probs, testyll, rand_list) %>%
@@ -372,16 +320,16 @@ p_Att_Stages <- function(y) {
   p_Att <- (0:20) / 20
   tempfun <- function(p)
     pmap_df(
-      resampled_pars,
+      draws(resampled_pars),
       p_NA = 0,
       p_CA = 0,
       p_Att = p,
       t = y * 12,
-      adh_theor
+      screen_by_adherence
     )
   number <- map_df(
     p_Att,
-    ~ adh_theor(p_Att = .x, p_NA = 0, p_CA = 0, t = y * 12)
+    ~ screen_by_adherence(p_Att = .x, p_NA = 0, p_CA = 0, t = y * 12)
   ) %>%
     select(-c(Cirrhosis, Mortality)) %>%
     pivot_longer(`BCLC 0`:`BCLC D`, values_to = "number") %>%

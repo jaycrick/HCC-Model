@@ -1,21 +1,18 @@
 Type: project
 Title: HCC Surveillance Markov Model (Cumming et al. 2024)
 Imports:
-    cli,
     conflicted,
     corrplot,
     cowplot,
     DescTools,
     dplyr,
     expm,
-    ggsci,
     ggthemes,
     gridExtra,
     here,
     hypogeom,
     latex2exp,
     magrittr,
-    mc2d,
     patchwork,
     ppcor,
     RColorBrewer,

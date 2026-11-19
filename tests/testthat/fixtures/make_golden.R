@@ -13,9 +13,9 @@ rows <- resampled_pars_fin[1:20, ]
 golden <- list(
   life_add_baseline = life_add(),
   life_add_no_screening = life_add(p_NA = 1, p_CA = 0),
-  adh_theor_default = unlist(adh_theor()),
+  screen_by_adherence_default = unlist(screen_by_adherence()),
   # KNOWN BUG C1 (gate G1): pins the CURRENT (wrong) output
-  fromf4_100_120 = unlist(fromf4(100, 120)),
+  progress_untreated_100_120 = unlist(progress_untreated(n = 100, t = 120)),
   neg_log_lik_hypo_probs = neg_log_lik(hypo_probs, meds = meds),
   scen_base = purrr::pmap_dbl(rows, base_scen_fun),
   scen_1a = purrr::pmap_dbl(rows, scen_1a_fun),

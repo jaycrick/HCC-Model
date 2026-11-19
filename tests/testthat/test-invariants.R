@@ -1,84 +1,87 @@
 # Invariant tests: properties that must hold for the CURRENT code.
 
-p_def <- list(
-  p_HCC = p_HCC_def,
-  p_0 = p_0_def,
-  p_A = p_A_def,
-  p_B = p_B_def,
-  p_C = p_C_def,
-  p_D = p_D_def
-)
-
 test_that("7x7 transition matrices are row-stochastic", {
-  for (nm in c("fromf4", "us_theor_pa")) {
-    tm <- if (nm == "fromf4") fromf4_tmat() else us_theor_pa_tmat()
-    expect_equal(dim(tm), c(7L, 7L), label = paste0(nm, " matrix dimensions"))
-    expect_equal(
-      rowSums(tm),
-      rep(1, 7),
-      tolerance = 1e-12,
-      ignore_attr = TRUE,
-      label = paste0("row sums of 7x7 matrix in ", nm, "() (R/model_core.R)")
-    )
-    expect_true(
-      all(tm >= 0 & tm <= 1),
-      label = paste0("entries of 7x7 matrix in ", nm, "() lie in [0,1]")
-    )
-  }
+  # progress_untreated() and screen_cohort() both build their matrix with
+  # transition_matrix(); the HCC probability is converted to monthly first.
+  tm <- transition_matrix(
+    annual_to_monthly(params_def$p_HCC),
+    unlist(params_def[c("p_0", "p_A", "p_B", "p_C", "p_D")])
+  )
+  expect_equal(dim(tm), c(7L, 7L), label = "transition_matrix dimensions")
+  expect_equal(
+    unname(rowSums(tm)),
+    rep(1, 7),
+    tolerance = 1e-12,
+    label = "row sums of transition_matrix() (R/model_core.R)"
+  )
+  expect_true(
+    all(tm >= 0 & tm <= 1),
+    label = "entries of transition_matrix() lie in [0,1]"
+  )
 })
 
-test_that("us_theor_pa conserves mass", {
-  dx <- us_theor_pa(n = 100, t = 120, m = 6, Pr_Att = 0.5)
+test_that("screen_cohort conserves mass", {
+  res <- screen_cohort(n = 100, t = 120, m = 6, Pr_Att = 0.5)
   expect_true(
-    all(dx >= 0) && sum(dx) <= 100 + 1e-9,
-    label = "us_theor_pa: 0 <= sum(Dx) <= n, so remaining = n - sum(Dx) >= 0"
+    all(res$dx >= 0) && all(res$undiagnosed >= 0),
+    label = "screen_cohort: dx and undiagnosed are non-negative"
   )
-  # In the long run with a large HCC hazard everyone reaches Mortality, where
-  # detection is certain, so remaining -> 0 and sum(Dx) == n.
-  dx_long <- us_theor_pa(n = 100, t = 2000, m = 6, Pr_Att = 0.5, p_HCC = 0.9)
   expect_equal(
-    sum(dx_long),
+    sum(res$dx) + sum(res$undiagnosed),
     100,
+    tolerance = 1e-12,
+    label = "screen_cohort: sum(Dx) + remaining == n at t = 120"
+  )
+  dx_long <- screen_cohort(n = 100, t = 2000, m = 6, Pr_Att = 0.5, p_HCC = 0.9)
+  expect_equal(
+    sum(dx_long$dx) + sum(dx_long$undiagnosed),
+    100,
+    tolerance = 1e-12,
+    label = "screen_cohort: sum(Dx)+remaining == n (t=2000, p_HCC=0.9)"
+  )
+  expect_equal(
+    sum(dx_long$undiagnosed),
+    0,
     tolerance = 1e-8,
-    label = "us_theor_pa: sum(Dx)+remaining == n (remaining -> 0, t=2000, p_HCC=0.9)"
+    label = "screen_cohort: remaining -> 0 in the long run (Mortality detected)"
   )
 })
 
 test_that("Pr_Att = 0 group is independent of m and Sens_*", {
-  base <- us_theor_pa(Pr_Att = 0)
+  base <- screen_cohort(Pr_Att = 0)$dx
   expect_equal(
-    us_theor_pa(Pr_Att = 0, m = 12),
+    screen_cohort(Pr_Att = 0, m = 12)$dx,
     base,
     tolerance = 1e-12,
-    label = "us_theor_pa(Pr_Att=0) independent of m (m=12 vs 6)"
+    label = "screen_cohort(Pr_Att=0) independent of m (m=12 vs 6)"
   )
   expect_equal(
-    us_theor_pa(Pr_Att = 0, m = 1),
+    screen_cohort(Pr_Att = 0, m = 1)$dx,
     base,
     tolerance = 1e-12,
-    label = "us_theor_pa(Pr_Att=0) independent of m (m=1 vs 6)"
+    label = "screen_cohort(Pr_Att=0) independent of m (m=1 vs 6)"
   )
   expect_equal(
-    us_theor_pa(
+    screen_cohort(
       Pr_Att = 0,
       Sens_0 = 0.9,
       Sens_A = 0.9,
       Sens_B = 0.1,
       Sens_C = 0.1,
       Sens_D = 0.1
-    ),
+    )$dx,
     base,
     tolerance = 1e-12,
-    label = "us_theor_pa(Pr_Att=0) independent of all Sens_*"
+    label = "screen_cohort(Pr_Att=0) independent of all Sens_*"
   )
 })
 
-test_that("adh_theor(p_NA=1, p_CA=0) equals us_theor_pa(Pr_Att=0)", {
+test_that("screen_by_adherence(p_NA=1, p_CA=0) equals screen_cohort(Pr_Att=0)", {
   expect_equal(
-    as.numeric(unlist(adh_theor(p_NA = 1, p_CA = 0))),
-    as.numeric(us_theor_pa(n = 100, Pr_Att = 0)),
+    unlist(screen_by_adherence(p_NA = 1, p_CA = 0)),
+    screen_cohort(n = 100, Pr_Att = 0)$dx,
     tolerance = 1e-12,
-    label = "adh_theor(p_NA=1,p_CA=0) == us_theor_pa(n=100,Pr_Att=0)"
+    label = "screen_by_adherence(NA=1,CA=0) == screen_cohort(Pr_Att=0)$dx"
   )
 })
 
@@ -111,10 +114,10 @@ test_that("life_add is monotone increasing in Sens_0, p_CA and L_A", {
 
 test_that("m > t gives no screening", {
   expect_equal(
-    us_theor_pa(Pr_Att = 1, t = 120, m = 121),
-    us_theor_pa(Pr_Att = 0, t = 120, m = 121),
+    screen_cohort(Pr_Att = 1, t = 120, m = 121),
+    screen_cohort(Pr_Att = 0, t = 120, m = 121),
     tolerance = 1e-12,
-    label = "us_theor_pa(Pr_Att=1, m=121 > t=120) == no-screening"
+    label = "screen_cohort(Pr_Att=1, m=121 > t=120)$dx == no-screening"
   )
   expect_equal(
     life_add(m = 121),

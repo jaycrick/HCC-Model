@@ -30,7 +30,7 @@ neg_log_lik <- function(
   US_00 <- hypo_probs[6]
   US_Aa <- hypo_probs[7]
   Sym_Aa <- hypo_probs[8]
-  Sym_Bb <- 8 * Sym_Aa
+  Sym_Bb <- SYM_B_RATIO * Sym_Aa # nolint: object_usage_linter.
 
   matrix_of_trans <- matrix(
     c(
@@ -180,9 +180,8 @@ base_scen_fun <- function(
   p_D,
   Sens_0,
   Sens_A,
-  Sym_A = Sym_A_def,
-  Sym_B = Sym_B_def,
-  p_HCC = p_HCC_def,
+  Sym_A = params_def$Sym_A,
+  p_HCC = params_def$p_HCC,
   ...
 ) {
   life_add(
@@ -195,7 +194,7 @@ base_scen_fun <- function(
     Sens_0 = Sens_0,
     Sens_A = Sens_A,
     Sym_A = Sym_A,
-    Sym_B = Sym_A * 8
+    Sym_B = SYM_B_RATIO * Sym_A
   )
 }
 
@@ -208,16 +207,15 @@ scen_1a_fun <- function(
   p_D,
   Sens_0,
   Sens_A,
-  Sym_A = Sym_A_def,
-  Sym_B = Sym_B_def,
-  p_HCC = p_HCC_def,
+  Sym_A = params_def$Sym_A,
+  p_HCC = params_def$p_HCC,
   ...
 ) {
   life_add(
     p_HCC = p_HCC,
-    p_NA = p_NA_def - 0.05,
-    p_CA = p_CA_def + 0.10,
-    p_Att = p_Att_def + 0.10,
+    p_NA = params_def$p_NA - 0.05,
+    p_CA = params_def$p_CA + 0.10,
+    p_Att = params_def$p_Att + 0.10,
     `p_0` = `p_0`,
     p_A = p_A,
     p_B = p_B,
@@ -226,7 +224,7 @@ scen_1a_fun <- function(
     Sens_0 = Sens_0,
     Sens_A = Sens_A,
     Sym_A = Sym_A,
-    Sym_B = Sym_A * 8
+    Sym_B = SYM_B_RATIO * Sym_A
   )
 }
 
@@ -239,16 +237,15 @@ scen_1b_fun <- function(
   p_D,
   Sens_0,
   Sens_A,
-  Sym_A = Sym_A_def,
-  Sym_B = Sym_B_def,
-  p_HCC = p_HCC_def,
+  Sym_A = params_def$Sym_A,
+  p_HCC = params_def$p_HCC,
   ...
 ) {
   life_add(
     p_HCC = p_HCC,
-    p_NA = p_NA_def - 0.10,
-    p_CA = p_CA_def + 0.15,
-    p_Att = p_Att_def + 0.20,
+    p_NA = params_def$p_NA - 0.10,
+    p_CA = params_def$p_CA + 0.15,
+    p_Att = params_def$p_Att + 0.20,
     `p_0` = `p_0`,
     p_A = p_A,
     p_B = p_B,
@@ -257,7 +254,7 @@ scen_1b_fun <- function(
     Sens_0 = Sens_0,
     Sens_A = Sens_A,
     Sym_A = Sym_A,
-    Sym_B = Sym_A * 8
+    Sym_B = SYM_B_RATIO * Sym_A
   )
 }
 
@@ -270,9 +267,8 @@ scen_2_fun <- function(
   p_D,
   Sens_0,
   Sens_A,
-  Sym_A = Sym_A_def,
-  Sym_B = Sym_B_def,
-  p_HCC = p_HCC_def,
+  Sym_A = params_def$Sym_A,
+  p_HCC = params_def$p_HCC,
   ...
 ) {
   life_add(
@@ -284,9 +280,9 @@ scen_2_fun <- function(
     p_D = p_D,
     Sens_0 = Sens_0 + 0.05,
     Sens_A = Sens_A + 0.05,
-    Sens_B = Sens_B_def + 0.05,
+    Sens_B = params_def$Sens_B + 0.05,
     Sym_A = Sym_A,
-    Sym_B = Sym_A * 8
+    Sym_B = SYM_B_RATIO * Sym_A
   )
 }
 
@@ -299,16 +295,15 @@ scen_3_fun <- function(
   p_D,
   Sens_0,
   Sens_A,
-  Sym_A = Sym_A_def,
-  Sym_B = Sym_B_def,
-  p_HCC = p_HCC_def,
+  Sym_A = params_def$Sym_A,
+  p_HCC = params_def$p_HCC,
   ...
 ) {
   life_add(
     p_HCC = p_HCC,
-    L_A = L_A_def + 1,
-    L_B = L_B_def + 0.5,
-    L_C = L_C_def + 0.5,
+    L_A = params_def$L_A + 1,
+    L_B = params_def$L_B + 0.5,
+    L_C = params_def$L_C + 0.5,
     `p_0` = `p_0`,
     p_A = p_A,
     p_B = p_B,
@@ -317,7 +312,7 @@ scen_3_fun <- function(
     Sens_0 = Sens_0,
     Sens_A = Sens_A,
     Sym_A = Sym_A,
-    Sym_B = Sym_A * 8
+    Sym_B = SYM_B_RATIO * Sym_A
   )
 }
 
