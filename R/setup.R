@@ -1,4 +1,4 @@
-# R/setup.R
+# Shared setup (file R/setup.R)
 # Shared initialisation: loaded at the top of every analysis script.
 # Defines libraries, conflict preferences, global constants, default
 # parameters, and shared visual objects.
@@ -34,6 +34,14 @@ stage_list <- c(
   "BCLC D",
   "Mortality"
 )
+
+# Stage suffixes of the per-stage parameters (BCLC 0, A, B, C, D), and the
+# parameter names built from them, in the order of the transition matrix rows.
+STAGE_IDS <- c("0", "A", "B", "C", "D")
+STAGE_P_NAMES <- paste0("p_", STAGE_IDS) # monthly progression probabilities
+STAGE_SYM_NAMES <- paste0("Sym_", STAGE_IDS) # symptomatic presentation
+STAGE_SENS_NAMES <- paste0("Sens_", STAGE_IDS) # ultrasound sensitivity
+STAGE_L_NAMES <- paste0("L_", STAGE_IDS) # life expectancy at diagnosis
 
 # ----- Default parameters (point estimates) -----------------------------------
 
@@ -126,9 +134,9 @@ names(TeX_labels) <- tex_param_names
 
 # Boot_labels: bootstrap parameter names as LaTeX expressions
 boot_specs <- list(
-  m = c("0", "A", "B", "C", "D"),
+  m = STAGE_IDS,
   D = c("0", "A", "alpha"),
-  p = c("0", "A", "B", "C", "D")
+  p = STAGE_IDS
 )
 Boot_labels <- do.call(
   c,
@@ -146,6 +154,10 @@ Boot_labels <- do.call(
 )
 
 # ----- Parameter groups and labels (one lookup) -------------------------------
+
+# The three adherence parameters (non-attenders, completely adherent, partial
+# attendance probability).
+ADHERENCE_PARAMS <- c("p_NA", "p_CA", "p_Att")
 
 # Facet groups, in plotting order, with their facet labels. Adherence is its own
 # group (p_NA, p_CA, p_Att), separate from the monthly transition probabilities.
@@ -166,7 +178,7 @@ group_labels <- c(
 #' @return Character vector of group names (names of `group_labels`).
 param_group <- function(nm) {
   ifelse(
-    nm %in% c("p_NA", "p_CA", "p_Att"),
+    nm %in% ADHERENCE_PARAMS,
     "Adherence",
     vapply(strsplit(nm, "_", fixed = TRUE), `[`, "", 1)
   )
@@ -220,15 +232,7 @@ facet_labels <- c(
 # Parameters that no intervention can change (disease progression, symptom
 # probabilities, HCC incidence): excluded from the "modifiable" sensitivity
 # plots.
-NON_MODIFIABLE_PARAMS <- c(
-  "p_HCC",
-  "p_0",
-  "p_A",
-  "p_B",
-  "p_C",
-  "p_D",
-  paste0("Sym_", c("0", "A", "B", "C", "D"))
-)
+NON_MODIFIABLE_PARAMS <- c("p_HCC", STAGE_P_NAMES, STAGE_SYM_NAMES)
 
 # ----- Manuscript-values ledger -----------------------------------------------
 # Every number quoted in the manuscript is recorded here, in one place, by

@@ -17,11 +17,13 @@
 # ----- Initialise -------------------------------------------------------------
 source(here::here("R", "setup.R"))
 source(here::here("R", "model_core.R"))
-source(here::here("R", "plotting.R"))
+source(here::here("R", "plot_theme.R"))
+source(here::here("R", "plot_sweeps.R"))
+source(here::here("R", "plot_scenarios.R"))
+source(here::here("R", "plot_calibration.R"))
 
 # Parameter groups and labels (the facet and axis labels) are in R/setup.R.
 x_lab_mod <- "Additional Life Years Gained"
-all_three <- c(jpg = 300, png = 600, pdf = 600)
 
 # ----- Sensitivity data -------------------------------------------------------
 param_tbl <- life_tibble(here("data", "Parameters.csv"))
@@ -43,7 +45,7 @@ param_tbl |>
 param_tbl |>
   plot_bound_tornado(
     "high",
-    title = TeX(r'(Upper $\textit{p}_{HCC}$ Sensitivity Analysis)')
+    title = TeX(r"(Upper $\textit{p}_{HCC}$ Sensitivity Analysis)")
   ) |>
   save_figure("sens_anal_f4_0_upper", 5.5, 9, "jpg", dpi = 300)
 
@@ -91,7 +93,7 @@ plot_tornado(
   y_lab = NULL,
   facet = "group"
 ) |>
-  save_figure("sens_anal_mod", 5, 4, dpi = all_three)
+  save_figure("sens_anal_mod", 5, 4, dpi = FIGURE_DPI_ALL)
 
 # ----- Full 25% univariate (all parameters) -----------------------------------
 param_tbl_25 |>
@@ -111,9 +113,10 @@ param_tbl_25 |>
   plot_bound_tornado(
     "high",
     exclude = NON_MODIFIABLE_PARAMS,
-    title = TeX(
-      r"(Upper $\textit{p}_{HCC}$ Estimated change in mortality from 25% change in each modifiable parameter)"
-    )
+    title = TeX(paste0(
+      r"(Upper $\textit{p}_{HCC}$ Estimated change in mortality )",
+      r"(from 25% change in each modifiable parameter)"
+    ))
   ) |>
   save_figure("sens_anal_25_f4_0_upper", 5.5, 9, "jpg", dpi = 300)
 
@@ -121,9 +124,10 @@ param_tbl_25 |>
   plot_bound_tornado(
     "low",
     exclude = NON_MODIFIABLE_PARAMS,
-    title = TeX(
-      r"(Lower $\textit{p}_{HCC}$ Estimated change in mortality from 25% change\nin each modifiable parameter)"
-    )
+    title = TeX(paste0(
+      r"(Lower $\textit{p}_{HCC}$ Estimated change in mortality )",
+      r"(from 25% change\nin each modifiable parameter)"
+    ))
   ) |>
   save_figure("sens_anal_25_f4_0_lower", 5.5, 9, "jpg", dpi = 300)
 

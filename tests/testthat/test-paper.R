@@ -113,7 +113,7 @@ test_that("Table 4: percent of bootstrap rows where X_diff > Y_diff", {
 
 test_that("Sec 3.1: mean months in each stage (Fig 2A)", {
   params <- read_params(csv_main)
-  st <- c("p_0", "p_A", "p_B", "p_C", "p_D")
+  st <- STAGE_P_NAMES
   expect_equal(
     round(1 / params[st, "POINT"], 1),
     c(12.5, 18.0, 2.9, 2.8, 6.2),
@@ -148,7 +148,7 @@ test_that("Sec 3.4: SE of Baseline and partial correlations", {
     label = "Sec 3.4: SE of Baseline = sd(Baseline)"
   )
   lg <- as.data.frame(lapply(
-    rp[c("p_0", "p_A", "p_B", "p_C", "p_D", "Sens_0", "Sens_A", "Sym_A")],
+    rp[NLL_PAR_NAMES],
     qlogis
   ))
   lg$Baseline <- rp$Baseline

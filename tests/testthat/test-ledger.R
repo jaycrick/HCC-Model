@@ -106,7 +106,7 @@ test_that("02 sensitivity ledger values equal the baseline", {
 test_that("04 scenario ledger values equal the baseline", {
   path <- file.path(withr::local_tempdir(), "ledger.csv")
   point <- run_scenarios(tibble::tibble(.rows = 1), derive_sym_b = FALSE)
-  for (risk in c("base", "low_risk", "high_risk")) {
+  for (risk in names(risk_multipliers)) {
     sfx <- ifelse(risk == "base", "", paste0("_", risk))
     d <- scenario_diff_data(point, resampled_pars_fin, risk)
     key <- d$points$ledger_key

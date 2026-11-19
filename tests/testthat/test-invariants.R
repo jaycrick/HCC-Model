@@ -5,7 +5,7 @@ test_that("7x7 transition matrices are row-stochastic", {
   # transition_matrix(); the HCC probability is converted to monthly first.
   tm <- transition_matrix(
     annual_to_monthly(params_def$p_HCC),
-    unlist(params_def[c("p_0", "p_A", "p_B", "p_C", "p_D")])
+    unlist(params_def[STAGE_P_NAMES])
   )
   expect_equal(dim(tm), c(7L, 7L), label = "transition_matrix dimensions")
   expect_equal(
@@ -76,7 +76,7 @@ test_that("Pr_Att = 0 group is independent of m and Sens_*", {
   )
 })
 
-test_that("screen_by_adherence(p_NA=1, p_CA=0) equals screen_cohort(Pr_Att=0)", {
+test_that("screen_by_adherence(p_NA=1, p_CA=0) = screen_cohort(Pr_Att=0)", {
   expect_equal(
     unlist(screen_by_adherence(p_NA = 1, p_CA = 0)),
     screen_cohort(n = 100, Pr_Att = 0)$dx,

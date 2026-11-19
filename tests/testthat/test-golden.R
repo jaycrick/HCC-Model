@@ -105,7 +105,8 @@ test_that("scenarios match shipped resampled_pars_fin columns", {
   # NOTE: the shipped columns were computed on another machine/run and differ
   # from a fresh computation by ~2e-16 relative (floating-point noise), so a
   # tolerance of exactly 0 is false here; 1e-12 is the documented
-  # float-reordering tolerance. The golden test above compares against a locally generated fixture.
+  # float-reordering tolerance. The golden test above compares against a
+  # locally generated fixture.
   stored <- scenario_table$column
   names(stored) <- scenario_table$id
   for (id in names(stored)) {

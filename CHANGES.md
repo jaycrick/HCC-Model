@@ -1,3 +1,32 @@
+# Changes
+
+## Structural changes (no numerical effect), S1-S10
+
+- S1: characterisation, invariant and paper-anchor test suite (golden values
+  in `tests/testthat/fixtures/golden.rds`); lint ratchet, pre-commit check and
+  GitHub Actions CI.
+- S2: core model on one named parameter list read by name from
+  `data/Parameters.csv` (`load_params()`), not by position.
+- S3: intervention scenarios defined once as data (`R/scenarios.R`).
+- S4-S5: plotting helpers split into data builders, plot functions and
+  `save_figure()`; `tools/check_globals.R` (undefined names); one
+  `prepare_draws()` for every sweep.
+- S6: manuscript numbers recorded in one ledger,
+  `output/manuscript_values.csv` (`record_values()`); `data-derived/` is
+  read-only input.
+- S7: likelihood and calibration restructured (`likelihood_matrix()`,
+  `end_state_probs()`, `neg_log_lik()`, `fit_point_estimate()`).
+- S8: stochastic simulation mirrors the cohort model (C10, test-only effect).
+- S9: model functions documented with paper and supplement references.
+- S10: lint baseline is 0 (`tools/lint_ratchet.R`); no function over 60 lines
+  (`neg_log_lik()` gained the helper `loglik_medians()`); `R/plotting.R` split
+  into `R/plot_theme.R`, `R/plot_sweeps.R`, `R/plot_scenarios.R` and
+  `R/plot_calibration.R`; repeated literal vectors replaced by the constants
+  `STAGE_IDS`, `STAGE_P_NAMES`, `STAGE_SYM_NAMES`, `STAGE_SENS_NAMES`,
+  `STAGE_L_NAMES`, `ADHERENCE_PARAMS`, `FIGURE_FORMATS`, `FIGURE_DPI_ALL`,
+  `NM_START`; `renv.lock` no longer records ggsci and mc2d. No golden value
+  changed.
+
 # Changes that alter model output
 
 ## G1 - untreated progression double conversion (finding C1)
@@ -66,7 +95,7 @@ The sweeps (`usfreq_graph`, `pafunc`, the attendance analysis in 03 and
 `p_Att_Stages`) passed each draw's Sym_A but the default Sym_B, while the
 scenarios use Sym_B = `SYM_B_RATIO` * Sym_A (8x). One helper,
 `prepare_draws(df)` (R/model_core.R), now sets it per draw; `run_scenarios()`
-and every sweep (`sweep_model()` in R/plotting.R) use it. The point-estimate
+and every sweep (`sweep_model()` in R/plot_sweeps.R) use it. The point-estimate
 line is unchanged (default parameters; tested identical).
 
 Bands, all 10 000 draws (scratch script, 2.5 / 97.5 %; IQR for stages):
@@ -112,6 +141,12 @@ sens_anal_25_univariate.
 
 (c) `Untreated_HCp_Cistribution_by_Risk_10_Year.jpg` is now
 `Untreated_HCC_Distribution_by_Risk_10_Year.jpg`.
+
+## G6 - `mlen` for even n (closed, not a bug)
+
+`calibration_data$stage$mlen` is n - 1 for even n (12 -> 11, 138 -> 137,
+210 -> 209), as Supp. p.3 footnote 2 prescribes. No code change, no number
+changes.
 
 ## G7 - stale hard-coded point estimates in analysis/01
 
@@ -171,3 +206,38 @@ negligible next to the bootstrap intervals, so the published values stand.
 - Pr(d_0) uses T^100 for the limit. Error against the exact closed form, and
   against T^1000: 1.445e-6 (below the 1e-5 tested).
 - The 15x15 matrix is built by `likelihood_matrix()` with named states.
+
+## Final sweep (S10): ledger and figure diff against the baseline
+
+`Rscript run_all.R` (36 min 36 s, exit 0), plus `analysis/01` run without its
+two `saveRDS()` calls so `data-derived/` stays untouched. The 33 ledger values
+written by 01 are compared too. `output/manuscript_values.csv` against the
+frozen baseline (relative tolerance 1e-12): 85 names compared, 3 differ, all
+from G7.
+
+| Name | Before | After | Gate |
+|---|---|---|---|
+| mean_B | 0.245654909996 | 0.242578201075 | G7 |
+| mean_C | 0.233549595588 | 0.236758217092 | G7 |
+| mean_D | 0.520069383913 | 0.519333401096 | G7 |
+
+The baseline holds 6 further names (`Pr_Com_Adh_Lower/Upper`,
+`Pr_Non_Adh_Lower/Upper`, `Pr_PA_Att_Lower/Upper`) that no code in this repo
+writes. They are stale entries from the pre-publication naming, which was
+renamed to `p_CA`/`p_NA`/`p_Att` in the original Dropbox repository (commit
+e72e6aa). The old read-modify-write of `param_names.rds` never deleted them.
+The same quantities are written as `p_CA_*`, `p_NA_*`, `p_Att_*`, and those
+match the baseline `p_*` entries.
+
+Figures (files written by this run): the same set as the baseline except
+G5c (`Untreated_HCp_Cistribution_...` is now `Untreated_HCC_Distribution_...`).
+19 files changed hash; 3 of them are metadata only.
+
+| Figures | Gate |
+|---|---|
+| `scenarios_new.pdf`, `scenarios_new_low_risk.pdf`, `scenarios_new_high_risk.pdf` | none: only /CreationDate and /ModDate differ (12 bytes; same size, same text, identical render at 100 dpi) |
+| `Untreated_HCC_over_time_10_Year.jpg`, `Untreated_HCC_Distribution_by_Risk_10_Year.jpg` | G1 (and G5c name) |
+| `attendance_plot_10_year.{jpg,png,pdf}`, `attendance_plot_stages_ribbon_10_year.jpg`, `HCC_Years_of_Life_Saved_by_p_CA_10_Year.jpg`, `HCC_Years_of_Life_Saved_by_Testing_Frequency_10_Year.jpg`, `..._10_log_Year.jpg` | G4 (bands), G5a (legend/caption) |
+| `sens_anal_univariate.jpg`, `sens_anal_mod.{jpg,png,pdf}`, `sens_anal_25_univariate.jpg`, `sens_anal_f4_0_both.jpg` | G5b (facets), G2 (p_B label) |
+| `sens_anal_f4_0_upper.jpg` | G3 |
+| `sens_anal_f4_0_lower.jpg` | G2 |

@@ -78,7 +78,7 @@ test_that("annual_to_monthly() inverts the monthly->annual compounding", {
 test_that("transition_matrix() is a named 7x7 row-stochastic matrix", {
   tm <- transition_matrix(
     annual_to_monthly(params_def$p_HCC),
-    unlist(params_def[c("p_0", "p_A", "p_B", "p_C", "p_D")])
+    unlist(params_def[STAGE_P_NAMES])
   )
   expect_equal(dim(tm), c(7L, 7L), label = "7x7")
   expect_identical(rownames(tm), stage_list, label = "rows named by stage_list")
@@ -131,7 +131,7 @@ test_that("progress_untreated() matches screen_cohort() w/o detection (G1)", {
   # a second annual->monthly conversion to the monthly p_0..p_D (C1).
   no_sym <- as.list(setNames(
     rep(0, 5),
-    paste0("Sym_", c("0", "A", "B", "C", "D"))
+    STAGE_SYM_NAMES
   ))
   for (tt in c(12, 120)) {
     sc <- do.call(

@@ -1,4 +1,4 @@
-# R/model_core.R
+# Model core (file R/model_core.R)
 # Core Markov model functions: parameter handling, transition matrix,
 # untreated progression, ultrasound detection, adherence model, life-years
 # calculation, and sensitivity-analysis helpers.
@@ -19,10 +19,6 @@
 # times that of BCLC A. Source: Cumming et al. 2024, Supplement Sec. 2.1.3,
 # footnote 4 (midpoint of the Sym_A = 0 and Sym_B = 0 MLEs).
 SYM_B_RATIO <- 8
-
-# Names of the five monthly stage-to-stage progression probabilities, in the
-# order of the transition matrix rows BCLC 0 .. BCLC D.
-STAGE_P_NAMES <- c("p_0", "p_A", "p_B", "p_C", "p_D")
 
 # ----- Parameter handling -----------------------------------------------------
 
@@ -160,13 +156,13 @@ screen_cohort <- function(
   # Ref: Cumming 2024, Fig. 1 and Tables 2-3 (Sym_X; Cirrhosis 0, Death 1)
   sym_prob <- c(
     0,
-    unlist(params[paste0("Sym_", c("0", "A", "B", "C", "D"))]),
+    unlist(params[STAGE_SYM_NAMES]),
     1
   )
   # Ref: Cumming 2024, Fig. 1 and Tables 2-3 (Sens_X)
   US_probs <- c(
     0,
-    unlist(params[paste0("Sens_", c("0", "A", "B", "C", "D"))]),
+    unlist(params[STAGE_SENS_NAMES]),
     1
   )
   # Ref: Cumming 2024, Fig. 1 (attend ultrasound: p_NA, p_CA, p_Att)
@@ -228,7 +224,7 @@ screen_by_adherence <- function(
   }
 
   # Ref: Cumming 2024, Sec. 2.1 (attendance 0, p_Att and 1 per cohort)
-  map2_dfr(adh_group, c(0, params$p_Att, 1), caught) %>%
+  map2_dfr(adh_group, c(0, params$p_Att, 1), caught) |>
     summarise_all(sum)
 }
 
@@ -253,7 +249,7 @@ screen_by_adherence <- function(
 life_add <- function(..., n = 100, t = 120, m = 6, params = params_def) {
   params <- modify_params(params, list(...))
   stage_caught <- screen_by_adherence(n = n, t = t, m = m, params = params)
-  L <- unname(unlist(params[paste0("L_", c("0", "A", "B", "C", "D"))]))
+  L <- unname(unlist(params[STAGE_L_NAMES]))
   # Ref: Cumming 2024, Sec. 2.1 (p. 5), Table 2 (L_X)
   sum(stage_caught * c(0, L, 0)) # life-years: sum_stage Dx_stage * L_stage
 }
@@ -336,11 +332,11 @@ life_tibble <- function(csv) {
     Parameter = names(lower), # parameters by name, in CSV order
     LOWER = unlist(lower, use.names = FALSE),
     UPPER = unlist(upper, use.names = FALSE)
-  ) %>%
+  ) |>
     pivot_longer(-Parameter, names_to = "Bound")
-  param_tbl <- param_tidy %>%
+  param_tidy |>
     mutate(
-      dfs_new = pmap(., dfs),
+      dfs_new = pmap(param_tidy, dfs),
       Bound = as.factor(str_to_title(Bound)),
       Parameter = as.factor(Parameter),
       dfs_low = map(
@@ -360,5 +356,4 @@ life_tibble <- function(csv) {
       years_low_comp = years_low - life_add(p_HCC = lower$p_HCC),
       years_high_comp = years_high - life_add(p_HCC = upper$p_HCC)
     )
-  return(param_tbl)
 }

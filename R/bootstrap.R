@@ -1,4 +1,4 @@
-# R/bootstrap.R
+# Calibration and bootstrap (file R/bootstrap.R)
 # Functions used in the bootstrap parameter estimation and uncertainty analysis.
 # Requires: R/setup.R, R/model_core.R, and the hypogeom and DescTools packages.
 # Ref: Cumming 2024, Sec. 2.2 and Supplement Sec. 2 (calibration, bootstrap).
@@ -13,6 +13,9 @@
 # stage-progression probabilities, ultrasound sensitivity in BCLC 0 and A, and
 # symptomatic detection in BCLC A (Sym_B = SYM_B_RATIO * Sym_A).
 NLL_PAR_NAMES <- c(STAGE_P_NAMES, "Sens_0", "Sens_A", "Sym_A")
+
+# Nelder-Mead starting values for the 8 likelihood parameters (NLL_PAR_NAMES).
+NM_START <- c(0.08, 0.06, 0.34, 0.35, 0.16, 0.22, 0.54, 0.01)
 
 #' Observed calibration data, defined once (Cumming et al. 2024, Cancers
 #' 16:2745, and its Supplement, p. 3 and footnote 2).
@@ -36,7 +39,7 @@ NLL_PAR_NAMES <- c(STAGE_P_NAMES, "Sens_0", "Sens_A", "Sym_A")
 #'   (named numeric: Dx_0, Dx_A, Dx_sym_early, n_early, n_sym).
 calibration_data <- local({
   stage <- data.frame(
-    stage = c("0", "A", "B", "C", "D"),
+    stage = STAGE_IDS,
     n = c(12, 101, 139, 138, 210),
     med = c(38, 25, 10, 7, 4)
   )
@@ -137,6 +140,35 @@ end_state_probs <- function(tm, sens_0, t = 100) {
 
 # ----- Negative log-likelihood for parametric bootstrap ----------------------
 
+#' Order-statistic part of the log-likelihood: the observed median months in
+#' stages 0, A, B, C and D under the hypergeometric model.
+#'
+#' The median of the time in stage k is the sum of the times in stages k..D,
+#' each at least one month, so its distribution is hypogeometric in par[k:5]
+#' after subtracting (6 - k) months.
+#' Ref: Supplement Sec. 2.1.2-2.1.3 (p. 3: HypoGeom(p_D, p_C, ..., p_X),
+#' median order statistic via DescTools::dOrder).
+#'
+#' @param par   Likelihood parameter vector (see NLL_PAR_NAMES).
+#' @param meds  Observed median months per stage (0, A, B, C, D).
+#' @return Scalar log-likelihood.
+loglik_medians <- function(par, meds) {
+  cal <- calibration_data$stage
+  ll_median <- 0
+  for (k in 5:1) {
+    ll_median <- ll_median +
+      DescTools::dOrder(
+        meds[k] - (6 - k),
+        distn = "hypogeom",
+        probs = par[k:5],
+        mlen = cal$mlen[k],
+        j = cal$j[k],
+        log = TRUE
+      )
+  }
+  ll_median
+}
+
 #' Negative log-likelihood for joint parameter estimation.
 #'
 #' Combines hypergeometric-order-statistics likelihoods for median survival
@@ -172,24 +204,7 @@ neg_log_lik <- function(
   tm <- likelihood_matrix(par[1], p_A, par[6], par[7])
   t100 <- end_state_probs(tm, par[6]) # t^(100), Supplement p. 4
 
-  # Order-statistic part: the median of the time in stage k is the sum of the
-  # times in stages k..D, each at least one month, so its distribution is
-  # hypogeometric in par[k:5] after subtracting (6 - k) months.
-  # Ref: Supplement Sec. 2.1.2-2.1.3 (p. 3: HypoGeom(p_D, p_C, ..., p_X),
-  # median order statistic via DescTools::dOrder).
-  cal <- calibration_data$stage
-  ll_median <- 0
-  for (k in 5:1) {
-    ll_median <- ll_median +
-      DescTools::dOrder(
-        meds[k] - (6 - k),
-        distn = "hypogeom",
-        probs = par[k:5],
-        mlen = cal$mlen[k],
-        j = cal$j[k],
-        log = TRUE
-      )
-  }
+  ll_median <- loglik_medians(par, meds)
 
   # Share of symptomatic cases found at BCLC A, then at B given not A.
   # Supp. p.6 prints Pr(d_alpha) without the (1 - Sym) factors; that is a
@@ -280,5 +295,5 @@ bootstrap_estimates <- function(
 #' @param value  Parameter name(s), e.g. "p_HCC".
 #' @return The matching expression(s) from `TeX_labels`.
 Tex_labeller <- function(value) {
-  return(TeX_labels[value])
+  TeX_labels[value]
 }

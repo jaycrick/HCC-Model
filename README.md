@@ -66,7 +66,10 @@ This installs all packages at the exact versions recorded in `renv.lock`.
 ├── R/                      # Pure function definitions (sourced, not run directly)
 │   ├── setup.R             # Libraries, seeds, constants, default parameters
 │   ├── model_core.R        # Markov transitions, US detection, adherence model
-│   ├── plotting.R          # Theme, save_figure(), sweeps, tornado and scenario plots
+│   ├── plot_theme.R        # theme_hcc(), save_figure(), interval helpers
+│   ├── plot_sweeps.R       # Bootstrap sweeps, band plots, stage distributions
+│   ├── plot_scenarios.R    # Tornado, scenario and response-curve plots
+│   ├── plot_calibration.R  # Bootstrap calibration figures (analysis/01)
 │   ├── simulation.R        # Stochastic check of the cohort model
 │   ├── scenarios.R         # Scenario definitions as data; run_scenarios()
 │   └── bootstrap.R         # Calibration data, likelihood, bootstrap inputs
@@ -179,7 +182,7 @@ the publication). Variables follow the paper's notation (`p_HCC`, `p_0`..`p_D`,
 | `fit_point_estimate(start)` | bootstrap.R | Nelder-Mead maximum-likelihood point estimate |
 | `bootstrap_inputs_long()`, `bootstrap_estimates()` | bootstrap.R | Read the shipped bootstrap inputs and MLEs |
 | `simulate_cohort(Pr_Att, ...)`, `simulate_by_adherence(...)` | simulation.R | Stochastic (binomial) check of the cohort model; not in the publication |
-| `theme_hcc()`, `save_figure()`, `sweep_*()`, `plot_*()` | plotting.R | Figure helpers: data builders, plot functions and saving |
+| `theme_hcc()`, `save_figure()`, `sweep_*()`, `plot_*()` | plot_*.R | Figure helpers: data builders, plot functions and saving |
 
 ---
 

@@ -26,7 +26,8 @@ if (run_bootstrap) {
   source(here("analysis", "01_bootstrap_params.R"))
 } else {
   message(
-    "==> Skipping 01_bootstrap_params.R (using shipped data-derived/ artifacts)."
+    "==> Skipping 01_bootstrap_params.R ",
+    "(using shipped data-derived/ artifacts)."
   )
   message("    Pass --bootstrap to regenerate from scratch.")
 }

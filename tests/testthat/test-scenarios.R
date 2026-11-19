@@ -63,8 +63,8 @@ test_that("each scenario changes exactly its own parameters", {
     names(params_def)[!mapply(identical, params_def, new)]
   }
   expect_identical(changed("baseline"), character(0))
-  expect_setequal(changed("real_adh"), c("p_NA", "p_CA", "p_Att"))
-  expect_setequal(changed("opt_adh"), c("p_NA", "p_CA", "p_Att"))
+  expect_setequal(changed("real_adh"), ADHERENCE_PARAMS)
+  expect_setequal(changed("opt_adh"), ADHERENCE_PARAMS)
   expect_setequal(changed("diag_sens"), c("Sens_0", "Sens_A", "Sens_B"))
   expect_setequal(changed("treat"), c("L_A", "L_B", "L_C"))
 })

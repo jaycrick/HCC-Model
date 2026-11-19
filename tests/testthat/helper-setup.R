@@ -12,7 +12,10 @@ source(here::here("R", "setup.R"))
 source(here::here("R", "model_core.R"))
 source(here::here("R", "bootstrap.R"))
 source(here::here("R", "scenarios.R"))
-source(here::here("R", "plotting.R"))
+source(here::here("R", "plot_theme.R"))
+source(here::here("R", "plot_sweeps.R"))
+source(here::here("R", "plot_scenarios.R"))
+source(here::here("R", "plot_calibration.R"))
 
 # The 8 likelihood parameters at the CSV point estimates (= paper Tables 1-2 =
 # the Nelder-Mead MLE; finding G7), in the order of NLL_PAR_NAMES.
@@ -26,8 +29,9 @@ csv_main <- here::here("data", "Parameters.csv")
 csv_25 <- here::here("data", "Parameters_25.csv")
 read_params <- function(csv) read.csv(csv, row.names = 1)
 
-golden_path <- function()
+golden_path <- function() {
   here::here("tests", "testthat", "fixtures", "golden.rds")
+}
 
 # The 15x15 matrix used inside neg_log_lik(), for the 8-vector `probs`
 nll_matrix <- function(probs = csv_par) {

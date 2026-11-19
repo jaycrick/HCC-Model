@@ -6,26 +6,26 @@
 # 6..1 months to US, 9-14 = undiagnosed A with 6..1 months to US,
 # 15 = absorbing "progressed past A".
 supp_matrix <- function(p0, pA, Sens0, SensA) {
-  T <- matrix(0, 15, 15)
-  T[1, 1] <- 1
-  T[2, 2] <- 1
-  T[15, 15] <- 1
+  trans <- matrix(0, 15, 15)
+  trans[1, 1] <- 1
+  trans[2, 2] <- 1
+  trans[15, 15] <- 1
   for (i in 3:7) {
-    T[i, i + 1] <- 1 - p0
-    T[i, i + 7] <- p0
+    trans[i, i + 1] <- 1 - p0
+    trans[i, i + 7] <- p0
   }
-  T[8, 1] <- (1 - p0) * Sens0
-  T[8, 2] <- p0 * SensA
-  T[8, 3] <- (1 - p0) * (1 - Sens0)
-  T[8, 9] <- p0 * (1 - SensA)
+  trans[8, 1] <- (1 - p0) * Sens0
+  trans[8, 2] <- p0 * SensA
+  trans[8, 3] <- (1 - p0) * (1 - Sens0)
+  trans[8, 9] <- p0 * (1 - SensA)
   for (i in 9:13) {
-    T[i, i + 1] <- 1 - pA
-    T[i, 15] <- pA
+    trans[i, i + 1] <- 1 - pA
+    trans[i, 15] <- pA
   }
-  T[14, 2] <- (1 - pA) * SensA
-  T[14, 9] <- (1 - pA) * (1 - SensA)
-  T[14, 15] <- pA
-  T
+  trans[14, 2] <- (1 - pA) * SensA
+  trans[14, 9] <- (1 - pA) * (1 - SensA)
+  trans[14, 15] <- pA
+  trans
 }
 
 test_that("params_def$Sym_B == 8 * params_def$Sym_A (Supp. 2.1.3 footnote 4)", {
@@ -33,7 +33,10 @@ test_that("params_def$Sym_B == 8 * params_def$Sym_A (Supp. 2.1.3 footnote 4)", {
     params_def$Sym_B,
     8 * params_def$Sym_A,
     tolerance = 1e-6,
-    label = "params_def$Sym_B == 8*params_def$Sym_A (Supp. Sec 2.1.3 footnote 4; data/Parameters.csv)"
+    label = paste(
+      "params_def$Sym_B == 8*params_def$Sym_A",
+      "(Supp. Sec 2.1.3 footnote 4; data/Parameters.csv)"
+    )
   )
 })
 
@@ -89,7 +92,10 @@ test_that("code's 15x15 matrix equals the independent Supp. S2 matrix", {
       supp_matrix(probs[1], probs[2], probs[6], probs[7]),
       tolerance = 0,
       ignore_attr = TRUE,
-      label = "matrix_of_trans in neg_log_lik() == Supp. Table S2 / matrix S1 (exact)"
+      label = paste(
+        "matrix_of_trans in neg_log_lik() == Supp. Table S2 / matrix S1",
+        "(exact)"
+      )
     )
   }
 })
@@ -110,7 +116,10 @@ test_that("t(0) %*% T^100 converges to the closed form Pr(d0) (Supp. fn 3)", {
     closed,
     tolerance = 1e-5,
     scale = 1,
-    label = "t(0) %*% T^100 [1] == closed-form Pr(d0), abs tol 1e-5 (Supp. footnote 3)"
+    label = paste(
+      "t(0) %*% T^100 [1] == closed-form Pr(d0), abs tol 1e-5",
+      "(Supp. footnote 3)"
+    )
   )
 })
 
@@ -163,7 +172,7 @@ old_hypo_probs <- c(
 )
 
 test_that("G7: Nelder-Mead from the documented start reproduces the CSV", {
-  start <- c(0.08, 0.06, 0.34, 0.35, 0.16, 0.22, 0.54, 0.01)
+  start <- NM_START
   fit <- fit_point_estimate(start)
   for (nm in NLL_PAR_NAMES) {
     expect_lt(

@@ -23,7 +23,7 @@
 # only when this script is run directly (run_all.R --bootstrap).
 #
 # Sections: (1) estimate, (2) summarise, (3) figures. Reusable pieces live in
-# R/bootstrap.R (likelihood, loaders) and R/plotting.R (figure builders).
+# R/bootstrap.R (likelihood, loaders) and R/plot_*.R (figure builders).
 #
 # Figures written to figures/:
 #   Bootstrap_sample_ranges.{jpg,png,pdf}
@@ -42,21 +42,21 @@ source(here::here("R", "setup.R"))
 source(here::here("R", "model_core.R"))
 source(here::here("R", "bootstrap.R"))
 source(here::here("R", "scenarios.R"))
-source(here::here("R", "plotting.R"))
+source(here::here("R", "plot_theme.R"))
+source(here::here("R", "plot_sweeps.R"))
+source(here::here("R", "plot_scenarios.R"))
+source(here::here("R", "plot_calibration.R"))
 
 library(hypogeom) # Written for this project by D. Pavlyshyn; see README
 
 dir.create(here("figures"), showWarnings = FALSE)
-all_formats <- c("jpg", "png", "pdf")
-all_dpi <- c(jpg = 300, png = 600, pdf = 600)
 
 # ===== 1. ESTIMATE =====
 # Point estimates are the published values (data/Parameters.csv = paper
 # Tables 1-2). The optimiser below re-derives them as a check; it never
 # overwrites them (finding G7).
 point_par <- unlist(params_def[NLL_PAR_NAMES])
-init_par <- c(0.08, 0.06, 0.34, 0.35, 0.16, 0.22, 0.54, 0.01)
-fit <- fit_point_estimate(init_par)
+fit <- fit_point_estimate(NM_START)
 message(
   "Nelder-Mead vs CSV: max |diff| = ",
   signif(max(abs(fit$par - point_par)), 3),
@@ -84,8 +84,7 @@ resampled_pars <- readRDS(here("data-derived", "resampled_pars_fin.rds"))
 
 # ===== 2. SUMMARISE =====
 rates_tbl <- rates_table(resampled_pars, point_par)
-stage_ids <- c("0", "A", "B", "C", "D")
-mean_ids <- paste0("mean_", stage_ids)
+mean_ids <- paste0("mean_", STAGE_IDS)
 scen_diff <- \(a, b) mean(resampled_pars[[a]] > resampled_pars[[b]])
 
 record_values(c(
@@ -128,9 +127,10 @@ point_wide <- scenario_columns(run_scenarios(
   as_tibble_row(as.list(point_par)),
   risk = risk_multipliers["base"]
 ))
+scen_ids <- c("1a", "1b", "2", "3")
 point_results <- c(
-  paste0("scen_", c("1a", "1b", "2", "3"), "_diff"),
-  paste0("scen_", c("1a", "1b", "2", "3")),
+  paste0("scen_", scen_ids, "_diff"),
+  paste0("scen_", scen_ids),
   "scen_1a_3",
   "scen_1a_4",
   "scen_1b_3",
@@ -159,7 +159,7 @@ if (interactive()) {
 
 # ===== 3. FIGURES =====
 save_all <- function(plot, name, w, h) {
-  save_figure(plot, name, w, h, formats = all_formats, dpi = all_dpi)
+  save_figure(plot, name, w, h, formats = FIGURE_FORMATS, dpi = FIGURE_DPI_ALL)
 }
 
 save_all(

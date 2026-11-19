@@ -1,4 +1,4 @@
-# R/simulation.R
+# Stochastic simulation (file R/simulation.R)
 # Stochastic (Monte Carlo) check of the deterministic cohort model.
 #
 # These functions replay, person by person (as binomial counts per state), the
@@ -36,12 +36,12 @@ simulate_cohort <- function(
   p_move <- tmat[cbind(1:6, 2:7)] # progression probability of states 1..6
   sym_prob <- c(
     0,
-    unlist(params[paste0("Sym_", c("0", "A", "B", "C", "D"))]),
+    unlist(params[STAGE_SYM_NAMES]),
     1
   )
   us_prob <- c(
     0,
-    unlist(params[paste0("Sens_", c("0", "A", "B", "C", "D"))]),
+    unlist(params[STAGE_SENS_NAMES]),
     1
   )
   # Ref: Cumming 2024, Fig. 1 (attend ultrasound?)

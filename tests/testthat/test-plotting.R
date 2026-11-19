@@ -1,4 +1,4 @@
-# Tests for R/plotting.R and the label tables in R/setup.R.
+# Tests for R/plot_*.R and the label tables in R/setup.R.
 # Gates G2-G5 (docs in CHANGES.md) are each covered by a labelled test here.
 
 # ----- G2 (finding C5): TeX_labels subscripts match the parameter names -------
@@ -48,7 +48,7 @@ test_that("G5b: every parameter has exactly one group, label and row", {
 
 test_that("G5b: adherence parameters are in the Adherence group", {
   grp <- function(nm) param_lookup$group[param_lookup$parameter == nm]
-  for (nm in c("p_NA", "p_CA", "p_Att")) {
+  for (nm in ADHERENCE_PARAMS) {
     expect_identical(grp(nm), "Adherence", label = paste("group of", nm))
   }
   expect_identical(grp("p_HCC"), "p")
@@ -74,7 +74,7 @@ test_that("G5b: facet and variable labels are derived from the lookup", {
 
 test_that("G5b: the non-modifiable parameters are all real parameters", {
   expect_true(all(NON_MODIFIABLE_PARAMS %in% names(params_def)))
-  expect_false(any(c("p_NA", "p_CA", "p_Att") %in% NON_MODIFIABLE_PARAMS))
+  expect_false(any(ADHERENCE_PARAMS %in% NON_MODIFIABLE_PARAMS))
 })
 
 # ----- G3 (finding C6): the upper-p_HCC tornado plots years_high_comp ---------

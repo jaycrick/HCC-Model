@@ -36,7 +36,6 @@ project_fns <- project_fns[vapply(
 allowed <- list(
   # tidy-eval column names inside dplyr/tidyr verbs
   life_tibble = c(
-    ".",
     "Parameter",
     "Bound",
     "dfs_new",

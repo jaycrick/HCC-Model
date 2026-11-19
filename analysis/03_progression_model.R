@@ -18,7 +18,10 @@
 # ----- Initialise -------------------------------------------------------------
 source(here::here("R", "setup.R"))
 source(here::here("R", "model_core.R"))
-source(here::here("R", "plotting.R"))
+source(here::here("R", "plot_theme.R"))
+source(here::here("R", "plot_sweeps.R"))
+source(here::here("R", "plot_scenarios.R"))
+source(here::here("R", "plot_calibration.R"))
 
 years <- 10
 months <- years * 12
@@ -104,7 +107,10 @@ plot_sweep_band(
     years,
     "Years"
   ),
-  caption = "People are taken from the partially\nadherent cohort, whilst the non-adherent\ncohort is assumed to be stationary",
+  caption = paste0(
+    "People are taken from the partially\nadherent cohort, whilst the ",
+    "non-adherent\ncohort is assumed to be stationary"
+  ),
   x_scale = scale_x_continuous(labels = label_percent(), expand = expansion(0))
 ) |>
   save_figure(
@@ -136,7 +142,7 @@ plot_sweep_band(
     paste0("attendance_plot_", years, "_year"),
     6,
     5.5,
-    dpi = c(jpg = 300, png = 600, pdf = 600)
+    dpi = FIGURE_DPI_ALL
   )
 
 # ----- Stage-specific diagnoses vs attendance ---------------------------------
@@ -150,7 +156,10 @@ stages <- sweep_stage_diagnoses(
 stages_caption <- paste("In 100 people over", years, "years")
 plot_stage_diagnoses(
   stages,
-  "Effect of Screening Attendance within the\nPartial Adherence Cohort on Diagnosis of HCC",
+  paste0(
+    "Effect of Screening Attendance within the\n",
+    "Partial Adherence Cohort on Diagnosis of HCC"
+  ),
   stages_caption
 ) |>
   save_figure(
@@ -162,7 +171,10 @@ plot_stage_diagnoses(
   )
 plot_stage_diagnoses(
   stages,
-  "Effect of Screening Attendance\non Stage of Diagnosis within\nthe Partial Adherence Cohort",
+  paste0(
+    "Effect of Screening Attendance\non Stage of Diagnosis within\n",
+    "the Partial Adherence Cohort"
+  ),
   stages_caption,
   ribbon = TRUE
 ) |>

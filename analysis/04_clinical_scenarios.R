@@ -17,7 +17,10 @@
 source(here::here("R", "setup.R"))
 source(here::here("R", "model_core.R"))
 source(here::here("R", "scenarios.R"))
-source(here::here("R", "plotting.R"))
+source(here::here("R", "plot_theme.R"))
+source(here::here("R", "plot_sweeps.R"))
+source(here::here("R", "plot_scenarios.R"))
+source(here::here("R", "plot_calibration.R"))
 
 # ----- Regression anchors -----------------------------------------------------
 noUS_scen <- life_add(p_NA = 1, p_CA = 0) # ≈ 14.856
@@ -37,7 +40,6 @@ message("  Baseline  = ", round(Baseline, 5))
 # params_def (as life_add() does), not derived from Sym_A.
 point <- run_scenarios(tibble(.rows = 1), derive_sym_b = FALSE)
 resampled_pars <- readRDS(here("data-derived", "resampled_pars_fin.rds"))
-all_three <- c(jpg = 300, png = 600, pdf = 600)
 
 # ----- All scenarios (absolute life years) ------------------------------------
 plot_scenarios_all(point, resampled_pars) |>
@@ -79,7 +81,7 @@ list(
 # ----- Scenario improvements (difference from baseline), by risk level --------
 # Writes the point estimates and 95% limits to the ledger and saves the figure.
 risk_figures <- tibble(
-  risk = c("base", "low_risk", "high_risk"),
+  risk = names(risk_multipliers),
   xlab = c(
     "Scenario",
     "Scenario Under Low HCC Risk Assumption",
@@ -100,5 +102,5 @@ for (k in seq_len(nrow(risk_figures))) {
   ))
 
   plot_scenario_violins(d, risk_figures$xlab[k], risk_figures$ymax[k]) |>
-    save_figure(paste0("scenarios_new", sfx), 6, 4, dpi = all_three)
+    save_figure(paste0("scenarios_new", sfx), 6, 4, dpi = FIGURE_DPI_ALL)
 }
