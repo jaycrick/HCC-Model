@@ -123,29 +123,42 @@ test_that("t(0) %*% T^100 converges to the closed form Pr(d0) (Supp. fn 3)", {
   )
 })
 
-test_that("end_state_probs: T^100 vs closed form and vs T^1000 (fn 3)", {
+test_that("end_state_probs: exact vs closed form, T^100, T^1000 (fn 3, G8)", {
   p0 <- csv_par[["p_0"]]
   s0 <- csv_par[["Sens_0"]]
   tm <- nll_matrix()
+  exact <- end_state_probs(tm, s0)
   d0_100 <- end_state_probs(tm, s0, t = 100)[["dx_0"]]
   d0_1000 <- end_state_probs(tm, s0, t = 1000)[["dx_0"]]
   closed <- s0 * (1 - (1 - p0)^6) / (6 * p0 * (1 - (1 - s0) * (1 - p0)^6))
-  expect_lt(
-    abs(d0_100 - closed),
-    1e-5,
-    label = "|Pr(d0) at t=100 - closed form| < 1e-5 (code matrix)"
-  )
-  expect_lt(
-    abs(d0_100 - d0_1000),
-    1e-5,
-    label = "|Pr(d0) at t=100 - at t=1000| < 1e-5"
+  expect_equal(
+    exact[["dx_0"]],
+    closed,
+    tolerance = 1e-12,
+    scale = 1,
+    label = "exact Pr(d0) == closed form"
   )
   expect_equal(
-    sum(end_state_probs(tm, s0)),
+    exact[["dx_0"]],
+    d0_1000,
+    tolerance = 1e-9,
+    scale = 1,
+    label = "exact Pr(d0) == T^1000"
+  )
+  expect_equal(
+    sum(exact),
     1,
     tolerance = 1e-12,
-    label = "end-state probabilities sum to 1"
+    label = "exact end-state probabilities sum to 1"
   )
+  # The old approximation (documented): error 1.445e-6 at t = 100.
+  expect_equal(
+    abs(d0_100 - closed),
+    1.445e-6,
+    tolerance = 1e-3,
+    label = "|T^100 - closed form| is the documented 1.445e-6"
+  )
+  expect_lt(abs(d0_100 - d0_1000), 1e-5, label = "T^100 vs T^1000 < 1e-5")
 })
 
 test_that("neg_log_lik is NaN outside [0,1]", {
@@ -171,20 +184,72 @@ old_hypo_probs <- c(
   0.01015650
 )
 
-test_that("G7: Nelder-Mead from the documented start reproduces the CSV", {
-  start <- NM_START
-  fit <- fit_point_estimate(start)
+test_that("fit_mle respects the box and reaches the CSV MLE (G9)", {
+  fit <- fit_mle(list(NM_START))
+  nm_only <- stats::optim(
+    NM_START,
+    neg_log_lik,
+    method = "Nelder-Mead",
+    control = list(maxit = 10000)
+  )
+  expect_identical(names(fit$par), NLL_PAR_NAMES)
+  expect_true(all(fit$par >= FIT_LB & fit$par <= FIT_UB), label = "in box")
+  expect_lte(fit$value, nm_only$value, label = "value <= NM-only value")
+  expect_lte(
+    fit$value,
+    neg_log_lik(csv_par) + 1e-8,
+    label = "value <= NLL(CSV) + 1e-8 (the CSV is the MLE)"
+  )
+  expect_lt(fit$par[["Sym_A"]], 1 / 8, label = "Sym_A < 1/8")
+  expect_identical(fit$convergence, 0L)
+})
+
+test_that("fit_at_bound flags values on or outside the box", {
+  par <- csv_par
+  expect_false(any(fit_at_bound(par)))
+  par[["p_B"]] <- 1
+  par[["p_C"]] <- FIT_UB[["p_C"]] * plogis(qlogis(1 - 1e-6))
+  par[["p_0"]] <- FIT_LB[["p_0"]]
+  par[["Sym_A"]] <- FIT_UB[["Sym_A"]] * plogis(qlogis(1 - 1e-6))
+  flagged <- names(which(fit_at_bound(par)))
+  expect_setequal(flagged, c("p_B", "p_C", "p_0", "Sym_A"))
+})
+
+test_that("polish-only starts are clipped and polished", {
+  start <- list(par = old_hypo_probs, nm = FALSE)
+  fit <- fit_mle(list(start))
+  expect_true(is.na(fit$starts$nm_value))
+  expect_lt(fit$value, neg_log_lik(old_hypo_probs))
+  expect_lt(fit$par[["Sym_A"]], 1 / 8)
+})
+
+test_that("refit_bootstrap does not depend on cores (2 resamples)", {
+  inputs <- readRDS(
+    here::here("data-derived", "list_of_resampled_milton_output.rds")
+  )[1:2]
+  hpc <- bootstrap_estimates()
+  starts_fn <- function(b) list(list(par = unlist(hpc[b, ]), nm = FALSE))
+  one <- refit_bootstrap(inputs, starts_fn, cores = 1)
+  two <- refit_bootstrap(inputs, starts_fn, cores = 2)
+  expect_identical(one, two)
+  expect_identical(names(one$pars), NLL_PAR_NAMES)
+  expect_identical(nrow(one$diag), 2L)
+})
+
+# Expected to FAIL until the CSV is regenerated from fit_mle (plan step T3).
+test_that("G9: fit_mle from c(NM_START, CSV) reproduces the CSV", {
+  fit <- fit_mle(list(NM_START, csv_par))
   for (nm in NLL_PAR_NAMES) {
     expect_lt(
       abs(fit$par[[nm]] - csv_par[[nm]]),
       1e-6,
-      label = paste0("|NM estimate - CSV POINT| < 1e-6 for ", nm)
+      label = paste0("|fit_mle estimate - CSV POINT| < 1e-6 for ", nm)
     )
   }
   expect_lt(
     abs(fit$value - neg_log_lik(csv_par)),
     1e-8,
-    label = "|NM minimum - NLL(CSV)| < 1e-8"
+    label = "|fit_mle minimum - NLL(CSV)| < 1e-8"
   )
   expect_lt(
     neg_log_lik(csv_par),

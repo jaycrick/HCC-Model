@@ -2,7 +2,7 @@
 #
 # RULE: fixtures/golden.rds was generated ONCE from the unmodified code by
 # fixtures/make_golden.R. These tests pin the code AS IT IS, bugs included.
-# The fixture is never regenerated except under an approved gate (G1..G7),
+# The fixture is never regenerated except under an approved gate (G1..G9),
 # and the gate is recorded in the commit message. Doubles are compared at
 # relative tolerance 1e-12. This is portable across platforms (libm/BLAS noise
 # is ~1e-15), and real model changes are >= 1e-3.
@@ -26,15 +26,15 @@ test_that("life_add() anchors are bit-for-bit stable", {
   # plan anchors, independent of the fixture
   expect_equal(
     life_add(),
-    68.023264456,
+    68.0342135997, # G8/G9 refit (was 68.023264456)
     tolerance = 1e-9,
-    label = "life_add() vs plan anchor 68.023264456"
+    label = "life_add() vs plan anchor 68.0342135997"
   )
   expect_equal(
     life_add(p_NA = 1, p_CA = 0),
-    14.8567745055,
+    14.8634470581, # G8/G9 refit (was 14.8567745055)
     tolerance = 1e-9,
-    label = "life_add(p_NA=1,p_CA=0) vs plan anchor 14.8567745055"
+    label = "life_add(p_NA=1,p_CA=0) vs plan anchor 14.8634470581"
   )
 })
 

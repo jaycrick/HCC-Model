@@ -74,7 +74,7 @@ This installs all packages at the exact versions recorded in `renv.lock`.
 │   ├── scenarios.R         # Scenario definitions as data; run_scenarios()
 │   └── bootstrap.R         # Calibration data, likelihood, bootstrap inputs
 ├── analysis/               # Numbered analysis scripts (run in order)
-│   ├── 01_bootstrap_params.R   # Parameter estimation (HPC; skip with shipped data)
+│   ├── 01_bootstrap_params.R   # Scenarios + figures from the refitted bootstrap draws (skip by default); reads bootstrap_fit_diagnostics.rds
 │   ├── 02_sensitivity.R        # Univariate sensitivity analysis
 │   ├── 03_progression_model.R  # Progression & screening-frequency figures
 │   └── 04_clinical_scenarios.R # Clinical scenario comparisons
@@ -83,9 +83,10 @@ This installs all packages at the exact versions recorded in `renv.lock`.
 │   ├── Parameters_sources.csv  # Source and table reference per parameter
 │   └── Parameters_25.csv       # ±25% variation bounds
 ├── data-derived/           # Pre-computed bootstrap outputs (Git LFS)
-│   ├── miltonoutput.rds             # Raw MLE outputs from HPC cluster
+│   ├── miltonoutput.rds             # Legacy HPC MLEs, superseded by the local refit (G9); kept for provenance
 │   ├── list_of_resampled_milton_output.rds  # Bootstrapped input data
-│   ├── resampled_pars.rds           # Bootstrapped transition parameters (n = 10 000)
+│   ├── resampled_pars.rds           # Refitted bootstrap parameters (n = 10 000; tools/refit_calibration.R)
+│   ├── bootstrap_fit_diagnostics.rds # Refit diagnostics (convergence, fallback, at-bound, audit)
 │   ├── resampled_pars_fin.rds       # As above + scenario life-year columns
 │   └── param_names.rds             # Named list of reported manuscript values
 ├── output/                 # manuscript_values.csv: every number quoted in the paper
@@ -107,7 +108,7 @@ Scripts must run in numerical order because downstream scripts read from
 
 | Script | Reads | Writes |
 |--------|-------|--------|
-| `01_bootstrap_params.R` | `miltonoutput.rds`, `list_of_resampled_*.rds` | `resampled_pars_fin.rds`, `param_names.rds` |
+| `01_bootstrap_params.R` | `resampled_pars.rds`, `bootstrap_fit_diagnostics.rds`, `list_of_resampled_*.rds` | `resampled_pars_fin.rds`, figures |
 | `02_sensitivity.R` | `Parameters.csv`, `Parameters_25.csv`, `param_names.rds` | `param_names.rds`, figures |
 | `03_progression_model.R` | `resampled_pars_fin.rds` | figures |
 | `04_clinical_scenarios.R` | `resampled_pars_fin.rds`, `param_names.rds` | `param_names.rds`, figures |
@@ -119,6 +120,18 @@ regenerate them (requires substantial compute; originally run on an HPC cluster)
 ```bash
 Rscript run_all.R --bootstrap
 ```
+
+The expensive calibration refit (point MLE plus 10 000 bootstrap resamples) is a
+separate one-off step, `tools/refit_calibration.R`; it writes
+`data-derived/resampled_pars.rds`, `bootstrap_fit_diagnostics.rds` and the
+calibrated rows of `data/Parameters.csv` and `Parameters_25.csv`:
+
+```bash
+Rscript tools/refit_calibration.R [--n 20] [--cores 10] [--config a|b|c] [--dry-run] [--out DIR]
+```
+
+`--dry-run` writes only to `--out` (default a temporary directory). Expected
+runtime: config d (default): about 1.5-3 h on a 10-core laptop (estimate); configs a-c are 3-10x slower.
 
 ---
 
@@ -133,11 +146,11 @@ source("R/model_core.R") # defines progress_untreated(), screen_cohort(), screen
 
 # Life-years gained under default parameters (current practice)
 life_add()
-#> [1] 68.02326
+#> [1] 68.03421
 
 # No surveillance counterfactual
 life_add(p_NA = 1, p_CA = 0)
-#> [1] 14.85677
+#> [1] 14.86345
 
 # What if ultrasound interval shortened to 3 months?
 life_add(m = 3)
@@ -179,7 +192,7 @@ the publication). Variables follow the paper's notation (`p_HCC`, `p_0`..`p_D`,
 | `likelihood_matrix(p_0, p_A, sens_0, sens_A)` | bootstrap.R | The 15x15 transition matrix of Supp. Table S2 / matrix S1 |
 | `end_state_probs(tm, sens_0, t)` | bootstrap.R | Probability of ending in each state after `t` months |
 | `neg_log_lik(par, ...)` | bootstrap.R | Negative log-likelihood of the 8 calibrated parameters |
-| `fit_point_estimate(start)` | bootstrap.R | Nelder-Mead maximum-likelihood point estimate |
+| `fit_point_estimate(start)` | bootstrap.R | Maximum-likelihood point estimate (thin wrapper of `fit_mle()`: Nelder-Mead then bounded L-BFGS-B polish) |
 | `bootstrap_inputs_long()`, `bootstrap_estimates()` | bootstrap.R | Read the shipped bootstrap inputs and MLEs |
 | `simulate_cohort(Pr_Att, ...)`, `simulate_by_adherence(...)` | simulation.R | Stochastic (binomial) check of the cohort model; not in the publication |
 | `theme_hcc()`, `save_figure()`, `sweep_*()`, `plot_*()` | plot_*.R | Figure helpers: data builders, plot functions and saving |
@@ -193,10 +206,11 @@ the publication). Variables follow the paper's notation (`p_HCC`, `p_0`..`p_D`,
 | `Parameters.csv` | Cumming 2024, Tables 1-3 | Point estimates and 95% bounds for all model parameters (point estimate = published MLE) |
 | `Parameters_sources.csv` | Cumming 2024, Tables 2-3 | `PARAMETER`, `SOURCE`, `TABLE_REF` for each row of `Parameters.csv`; unknowns are marked `TODO: confirm with author` |
 | `Parameters_25.csv` | Derived from Parameters.csv | ±25% variation bounds for modifiable parameters |
-| `miltonoutput.rds` | HPC cluster MLE run | 10 000 MLE optimisation results from bootstrapped input data |
+| `miltonoutput.rds` | HPC cluster MLE run | Legacy HPC MLEs, superseded by the local refit (G9); kept for provenance |
 | `list_of_resampled_milton_output.rds` | Parametric bootstrap | Bootstrapped summary statistics used as MLE inputs |
-| `resampled_pars.rds` | Derived from `miltonoutput.rds` | Extracted bootstrapped transition + sensitivity parameters |
-| `resampled_pars_fin.rds` | Derived from `resampled_pars.rds` | As above with scenario life-year columns appended |
+| `resampled_pars.rds` | `tools/refit_calibration.R` (G9) | Refitted bootstrap MLEs (8 transition + sensitivity parameters, 10 000 rows) |
+| `bootstrap_fit_diagnostics.rds` | `tools/refit_calibration.R` (G9) | Per-resample NLL, convergence code, best start, at-bound flags, old HPC NLL |
+| `resampled_pars_fin.rds` | Derived from `resampled_pars.rds` (by `01_bootstrap_params.R`) | As above with scenario life-year columns appended |
 | `param_names.rds` | Computed during pipeline | Named list of all values reported in the manuscript text |
 
 ---
@@ -205,8 +219,8 @@ the publication). Variables follow the paper's notation (`p_HCC`, `p_0`..`p_D`,
 
 These values should be reproduced exactly from a clean run:
 
-- `life_add()` (baseline, default parameters) ≈ **68.02326** life years per cohort of 100
-- `life_add(p_NA = 1, p_CA = 0)` (no surveillance) ≈ **14.85677** life years
+- `life_add()` (baseline, default parameters) ≈ **68.03421** life years per cohort of 100
+- `life_add(p_NA = 1, p_CA = 0)` (no surveillance) ≈ **14.86345** life years
 
 Both are asserted via `stopifnot` in `04_clinical_scenarios.R`.
 
@@ -293,9 +307,9 @@ Where the publication and the code disagree, the code was kept so that the publi
 | P2 | Paper Sec. 2.5 | The text gives low / high annual HCC risks of 1.1% / 2.2% (2.2% is also the baseline); the code, and Supplement Sec. 5 ("half and double"), use x0.5 and x2 of p_HCC (1.1% and 4.4%). The Supplement Figs. S6-S7 captions say 1% and 4%. |
 | P3 | Paper Sec. 2.2.2 | "52 of n = 156"; the Supplement (s-bar = 158) and the code use 158. |
 | P4 | Supplement Fig. S3 caption | Says N(mu = 68.0); 68.0 is the point estimate `life_add()`. The fitted normal in the code uses the bootstrap mean (about 67.6). |
-| P5 | Supplement Table S2 | Lists 14 states; the code adds a 15th absorbing state `past_A` (progressed past BCLC A undiagnosed). Also, Pr(d_0) uses the t^(100) approximation (error about 1.5e-6) rather than the exact closed form, because it generated the published MLE. |
+| P5 | Supplement Table S2 | Lists 14 states; the code adds a 15th absorbing state `past_A` (progressed past BCLC A undiagnosed). Also, Pr(d_0) uses the t^(100) approximation (error about 1.5e-6) rather than the exact closed form, because it generated the published MLE. **Closed by G8**: the code now uses exact absorption probabilities. See `CHANGES.md`. |
 | P6 | Paper Sec. 2.4, scenario 3 | The text lists L_A +1 year and L_B +6 months only; the code, and the published 9.0 life-years, also add L_C + 0.5. |
-| P7 | Table 3 / `Parameters.csv` | The published MLE is Nelder-Mead's stopping point at its default tolerance, not an exact optimum (NLL 2e-4 above a tight BFGS optimum); negligible next to the bootstrap intervals. See `CHANGES.md`. |
+| P7 | Table 3 / `Parameters.csv` | The published MLE is Nelder-Mead's stopping point at its default tolerance, not an exact optimum (NLL 2e-4 above a tight BFGS optimum); negligible next to the bootstrap intervals. **Closed by G9**: `fit_mle()` polishes with a bounded L-BFGS-B, and the whole bootstrap was refitted locally. See `CHANGES.md`. |
 
 ---
 

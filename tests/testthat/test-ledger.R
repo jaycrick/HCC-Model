@@ -1,6 +1,7 @@
 # Manuscript-values ledger: record_values() mechanics, and the values that can
-# be recomputed cheaply (02 and 04) against the frozen baseline
-# the frozen baseline file in data-derived (param_names.rds).
+# be recomputed cheaply (02 and 04) against the ledger baseline fixture
+# (fixtures/ledger_baseline.rds, regenerated under G9). The published values
+# stay frozen in data-derived/param_names.rds, which is never rewritten.
 
 test_that("record_values round-trips exactly", {
   path <- file.path(withr::local_tempdir(), "ledger.csv")
@@ -70,7 +71,25 @@ test_that("record_values rejects unnamed or duplicated values", {
 })
 
 # ----- Baseline comparison ----------------------------------------------------
-baseline <- unlist(readRDS(here::here("data-derived", "param_names.rds")))
+baseline <- readRDS(
+  here::here("tests", "testthat", "fixtures", "ledger_baseline.rds")
+)
+
+test_that("the frozen published reference param_names.rds is unchanged", {
+  frozen <- readRDS(here::here("data-derived", "param_names.rds"))
+  expect_length(frozen, 91)
+  # published value as stored (commit 6902e05); G9 changed the ledger, not this
+  expect_equal(
+    frozen[["diag_scen_lower"]],
+    3.57197106509,
+    tolerance = 1e-9,
+    label = "frozen param_names.rds diag_scen_lower (published, pre-G9)"
+  )
+  expect_true(
+    all(names(baseline) %in% names(frozen)),
+    label = "baseline names are a subset of the frozen names"
+  )
+})
 
 # Names that may legitimately differ from the baseline (none observed so far).
 # G1 (untreated progression) and G4 (Sym_B in sweeps) would be listed here

@@ -116,26 +116,39 @@ likelihood_matrix <- function(p_0, p_A, sens_0, sens_A) {
   tm
 }
 
-#' Probability of ending each state after `t` months, starting from the
-#' uniform position in the 6-month screening cycle (Supp. footnote 3).
+#' Probability of ending in each state, starting from the uniform position in
+#' the 6-month screening cycle (Supp. footnote 3).
 #'
-#' Ref: Supplement Sec. 2.1.3 (p. 4: initial distribution t^(0), limiting
-#' distribution approximated by t^(100)) and footnote 3 (p. 5, convergence
-#' check against the exact solution for Pr(d_0)).
+#' Ref: Supplement Sec. 2.1.3 (p. 4: initial distribution t^(0)) and footnote 3
+#' (p. 5: absorbing chain, fundamental matrix N = (I - Q)^-1). Finding P5 is
+#' applied (gate G8): with `t = NULL` the absorption probabilities are exact,
+#' B = (I - Q)^-1 R, instead of the published t^(100) = t^(0) T^100
+#' approximation (error about 1.4e-6 in Pr(d_0)).
 #'
-#' Pr(d_0) is the first element. The closed form is
-#' s0 (1-(1-p0)^6) / (6 p0 (1-(1-s0)(1-p0)^6)); t = 100 months stands in for
-#' infinity (error about 1.5e-6, tested against the closed form).
+#' Transient states are 3:14 (u0_6 ... uA_1); absorbing states are 1, 2, 15
+#' (dx_0, dx_A, past_A). Pr(d_0) is the first element. Its closed form is
+#' s0 (1-(1-p0)^6) / (6 p0 (1-(1-s0)(1-p0)^6)).
 #'
 #' @param tm  Matrix from likelihood_matrix().
 #' @param sens_0  Ultrasound sensitivity in BCLC 0 (sets the start vector).
-#' @param t   Number of months.
-#' @return Numeric vector of length 15 (names as `tm`).
-end_state_probs <- function(tm, sens_0, t = 100) {
+#' @param t   `NULL` (exact, default) or a number of months, which gives the
+#'   old power approximation (kept for the convergence test).
+#' @return Numeric vector of length 15 (names as `tm`); transient entries are
+#'   0 when `t` is `NULL`.
+end_state_probs <- function(tm, sens_0, t = NULL) {
   # Ref: Supplement p. 4 (initial distribution t^(0))
   start <- c(sens_0 / 6, 0, (1 - sens_0) / 6, rep(1 / 6, 5), rep(0, 7))
-  # Ref: Supplement p. 4 (t^(100) = t^(0) T^100)
-  drop(start %*% (tm %^% t))
+  if (!is.null(t)) {
+    # Ref: Supplement p. 4 (t^(t) = t^(0) T^t)
+    return(drop(start %*% (tm %^% t)))
+  }
+  tr <- 3:14
+  ab <- c(1, 2, 15)
+  # Ref: Supplement footnote 3 (absorbing chain; B = (I - Q)^-1 R)
+  B <- solve(diag(12) - tm[tr, tr], tm[tr, ab])
+  out <- setNames(numeric(15), rownames(tm))
+  out[ab] <- start[ab] + drop(start[tr] %*% B)
+  out
 }
 
 # ----- Negative log-likelihood for parametric bootstrap ----------------------
@@ -202,7 +215,7 @@ neg_log_lik <- function(
   Sym_B <- SYM_B_RATIO * Sym_A # Ref: Supplement Sec. 2.1.3, footnote 4
 
   tm <- likelihood_matrix(par[1], p_A, par[6], par[7])
-  t100 <- end_state_probs(tm, par[6]) # t^(100), Supplement p. 4
+  absorb <- end_state_probs(tm, par[6]) # exact, Supplement fn 3 (P5, G8)
 
   ll_median <- loglik_medians(par, meds)
 
@@ -217,36 +230,305 @@ neg_log_lik <- function(
 
   # Ref: Supplement p. 4-5 (L_D0 = Binom(D_0; k, t_1), L_DA|D0 =
   # Binom(D_A; k - D_0, t_2 / (1 - t_1))) and p. 6 (L_Dalpha).
-  # Finding P5: t_1 uses the t^(100) approximation, not the exact closed form
-  # (difference about 1.5e-6); kept because it produced the published MLE.
+  # Finding P5 (applied, G8): t_1 and t_2 are the exact absorption
+  # probabilities, not the published t^(100) approximation (about 1.4e-6).
   -(ll_median +
-    dbinom(Dx_0, n_early, t100[1], log = TRUE) +
+    dbinom(Dx_0, n_early, absorb[1], log = TRUE) +
     dbinom(
       Dx_A,
       n_early - Dx_0,
-      t100[2] / (1 - t100[1]),
+      absorb[2] / (1 - absorb[1]),
       log = TRUE
     ) +
     dbinom(Dx_sym_early, n_sym, pr_d_alpha, log = TRUE))
 }
 
-#' Maximum-likelihood point estimate by Nelder-Mead.
-#' The published MLE is NM's stopping point at default tolerance (CHANGES P7).
+# Box for the polish step (probability scale). Reasons:
+#  H1: a tiny p makes the hypogeometric FFT support huge (up to 8 s and many
+#      GB per evaluation at p = 1e-4), so the five p_* stay above 1e-3;
+#  H2: Sym_B = SYM_B_RATIO * Sym_A must be <= 1, so Sym_A < 1 / SYM_B_RATIO;
+#  H4: fits can sit at p = 1, so the upper bound is 1 - 1e-6, not 1.
+FIT_LB <- setNames(c(rep(1e-3, 5), 1e-6, 1e-6, 1e-6), NLL_PAR_NAMES)
+FIT_UB <- setNames(
+  c(rep(1 - 1e-6, 7), (1 / SYM_B_RATIO) * (1 - 1e-6)),
+  NLL_PAR_NAMES
+)
+# Penalty for a non-finite NLL inside the polish only (H3: Inf at p_D near 1).
+FIT_PENALTY <- 1e10
+
+#' Polish a Nelder-Mead result by L-BFGS-B on the scaled-logit scale
+#' z = qlogis(par / ub), with `par` clipped into the box first.
 #'
-#' Ref: Supplement Sec. 2.1.3 (p. 6: "numerically solved using the
-#' Nelder-Mead method") and Cumming 2024, Sec. 2.2.1.
+#' Ref: Supplement Sec. 2.1.3 (p. 6) uses Nelder-Mead alone; the polish is the
+#' P7 improvement (gate G9).
 #'
-#' @param start  Starting values (length 8, see NLL_PAR_NAMES).
-#' @return The optim() result; `$par` is named by NLL_PAR_NAMES.
-fit_point_estimate <- function(start) {
-  fit <- stats::optim(
-    start,
+#' @param par  NM result (length 8).
+#' @param ... Data arguments passed to neg_log_lik().
+#' @return The optim() result with `$par` on the probability scale, or NULL if
+#'   the polish errors.
+polish_fit <- function(par, ...) {
+  par <- pmin(pmax(par, FIT_LB), FIT_UB)
+  to_par <- function(z) FIT_UB * plogis(z)
+  obj <- function(z) {
+    v <- neg_log_lik(to_par(z), ...)
+    if (is.finite(v)) v else FIT_PENALTY
+  }
+  tryCatch(
+    {
+      fit <- stats::optim(
+        qlogis(par / FIT_UB),
+        obj,
+        method = "L-BFGS-B",
+        lower = qlogis(FIT_LB / FIT_UB),
+        upper = qlogis(1 - 1e-6),
+        control = list(factr = 1e3, maxit = 1000)
+      )
+      fit$par <- to_par(fit$par)
+      fit
+    },
+    error = function(e) NULL
+  )
+}
+
+#' Stage 1 of one start: Nelder-Mead, or (polish-only) the clipped start.
+#'
+#' @param start  Numeric vector (NM + polish) or `list(par = <numeric>, nm =
+#'   FALSE)` (polish only; `par` is clipped into the box).
+#' @param ... Data arguments passed to neg_log_lik().
+#' @return An optim()-like list (`par`, `value`, `convergence`, `message`).
+start_stage <- function(start, ...) {
+  if (!is.list(start)) {
+    start <- list(par = start, nm = TRUE)
+  }
+  if (isFALSE(start$nm)) {
+    par <- pmin(pmax(start$par, FIT_LB), FIT_UB)
+    return(list(
+      par = par,
+      value = neg_log_lik(par, ...),
+      convergence = 99L,
+      message = "not optimised (nm = FALSE)",
+      nm_run = FALSE
+    ))
+  }
+  nm <- stats::optim(
+    start$par,
     neg_log_lik,
+    ...,
     method = "Nelder-Mead",
     control = list(maxit = 10000)
   )
-  fit$par <- setNames(fit$par, NLL_PAR_NAMES)
+  nm$nm_run <- TRUE
+  nm
+}
+
+#' One start: Nelder-Mead (unless `nm = FALSE`), then the polish; keep the
+#' better of the two.
+#'
+#' @param start  See start_stage().
+#' @param ... Data arguments passed to neg_log_lik().
+#' @return List: `fit` (chosen optim result), `nm_value` (NA if Nelder-Mead
+#'   was skipped), `polish_value`, `polish_convergence`.
+fit_one_start <- function(start, ...) {
+  nm <- start_stage(start, ...)
+  pol <- polish_fit(nm$par, ...)
+  use_pol <- !is.null(pol) && !(pol$value >= nm$value)
+  list(
+    fit = if (use_pol) pol else nm,
+    nm_value = if (nm$nm_run) nm$value else NA_real_,
+    polish_value = if (is.null(pol)) NA_real_ else pol$value,
+    polish_convergence = if (is.null(pol)) NA_integer_ else pol$convergence
+  )
+}
+
+#' Which parameters sit on the box? One-sided: on or outside the lower or
+#' upper limit, within a relative 1e-6 (the upper tolerance is 2e-6 so that the
+#' polish limit, ub * plogis(qlogis(1 - 1e-6)), is flagged too).
+#'
+#' @param par  Named parameter vector (length 8).
+#' @return Named logical vector.
+fit_at_bound <- function(par) {
+  par <- setNames(par, NLL_PAR_NAMES)
+  par <= FIT_LB * (1 + 1e-6) | par >= FIT_UB * (1 - 2e-6)
+}
+
+#' Maximum-likelihood estimate: Nelder-Mead then L-BFGS-B polish, multi-start.
+#'
+#' Ref: Supplement Sec. 2.1.3 (p. 6: "numerically solved using the
+#' Nelder-Mead method") and Cumming 2024, Sec. 2.2.1. Finding P7 is applied
+#' (gate G9): each start is polished on the scaled-logit scale inside the box
+#' FIT_LB..FIT_UB; the polish is kept only if it lowers the NLL.
+#'
+#' @param starts  List of starts. Each is a numeric vector (length 8, see
+#'   NLL_PAR_NAMES; Nelder-Mead then polish) or `list(par = <numeric>, nm =
+#'   FALSE)` (polish only, clipped into the box).
+#' @param meds,Dx_0,Dx_A,Dx_sym_early,n_early,n_sym  Data, as in neg_log_lik().
+#' @return List: `par` (named), `value`, `convergence` (of the chosen stage;
+#'   0 = OK; 99 if the only stage was an unpolished polish-only start),
+#'   `message`, `at_bound` (named logical, see fit_at_bound()) and
+#'   `starts` (data frame: start, nm_value, polish_value, polish_convergence,
+#'   chosen).
+fit_mle <- function(
+  starts,
+  meds = calibration_data$stage$med,
+  Dx_0 = calibration_data$dx[["Dx_0"]],
+  Dx_A = calibration_data$dx[["Dx_A"]],
+  Dx_sym_early = calibration_data$dx[["Dx_sym_early"]],
+  n_early = calibration_data$dx[["n_early"]],
+  n_sym = calibration_data$dx[["n_sym"]]
+) {
+  res <- lapply(
+    starts,
+    fit_one_start,
+    meds = meds,
+    Dx_0 = Dx_0,
+    Dx_A = Dx_A,
+    Dx_sym_early = Dx_sym_early,
+    n_early = n_early,
+    n_sym = n_sym
+  )
+  vals <- vapply(res, function(r) r$fit$value, numeric(1))
+  best <- which.min(vals)
+  fit <- res[[best]]$fit
+  par <- setNames(fit$par, NLL_PAR_NAMES)
+  list(
+    par = par,
+    value = fit$value,
+    convergence = fit$convergence,
+    message = if (is.null(fit$message)) "" else fit$message,
+    at_bound = fit_at_bound(par),
+    starts = data.frame(
+      start = seq_along(res),
+      nm_value = vapply(res, function(r) r$nm_value, numeric(1)),
+      polish_value = vapply(res, function(r) r$polish_value, numeric(1)),
+      polish_convergence = vapply(
+        res,
+        function(r) r$polish_convergence,
+        numeric(1)
+      ),
+      chosen = seq_along(res) == best
+    )
+  )
+}
+
+#' Maximum-likelihood point estimate from one start (thin wrapper).
+#' P7 is applied (gate G9): see fit_mle().
+#'
+#' @param start  Starting values (length 8, see NLL_PAR_NAMES).
+#' @return The fit_mle() result for the single start.
+fit_point_estimate <- function(start) {
+  fit_mle(list(start))
+}
+
+#' Does a fit need the fallback? Yes if it did not converge, sits on the box,
+#' or has no finite value (e.g. the polish failed).
+#'
+#' @param fit  A fit_mle() result.
+#' @return Logical scalar.
+needs_fallback <- function(fit) {
+  !is.finite(fit$value) || fit$convergence != 0 || any(fit$at_bound)
+}
+
+#' Fit one bootstrap resample, with an optional fallback in the same worker.
+#'
+#' `best_start` codes the start that gave the chosen result: an index into the
+#' primary starts list; or, if the fallback ran and was better, the length of
+#' the primary list plus the index into the fallback list.
+#'
+#' @param x  numeric(8): m_0..m_D, D_0, D_A, D_alpha.
+#' @param starts,fallback  Lists of starts (see fit_mle()); `fallback` may be
+#'   NULL.
+#' @return A fit_mle() result with extra elements `fallback` (logical) and
+#'   `best_start`.
+fit_resample <- function(x, starts, fallback = NULL) {
+  fit_x <- function(s) {
+    fit_mle(
+      s,
+      meds = x[1:5],
+      Dx_0 = x[6],
+      Dx_A = x[7],
+      Dx_sym_early = x[8]
+    )
+  }
+  fit <- fit_x(starts)
+  fit$best_start <- which(fit$starts$chosen)[1]
+  fit$fallback <- FALSE
+  if (!is.null(fallback) && needs_fallback(fit)) {
+    alt <- fit_x(fallback)
+    fit$fallback <- TRUE
+    if (alt$value < fit$value || !is.finite(fit$value)) {
+      alt$best_start <- length(starts) + which(alt$starts$chosen)[1]
+      alt$fallback <- TRUE
+      fit <- alt
+    }
+  }
   fit
+}
+
+#' Refit the MLE for every bootstrap resample, in parallel and deterministic.
+#'
+#' Ref: Supplement Sec. 2.1.4-2.1.5 (p. 7: bootstrap samples, bootstrap MLEs).
+#' Each element of `inputs` is numeric(8): m_0..m_D, D_0, D_A, D_alpha (the
+#' order of bootstrap_inputs_long()), mapped to `meds = x[1:5]`, `Dx_0 = x[6]`,
+#' `Dx_A = x[7]`, `Dx_sym_early = x[8]`; `n_early` and `n_sym` are unchanged
+#' (calibration_data$dx). Resamples are forked one by one
+#' (`mc.preschedule = FALSE`, their cost varies a lot); there is no RNG, and
+#' the results are in the order of `ids`, whatever `cores` is.
+#'
+#' @param inputs  List read from list_of_resampled_milton_output.rds.
+#' @param starts_fn  Function of the resample index b returning a list of
+#'   starts.
+#' @param cores  Forked workers; the result does not depend on it.
+#' @param fallback_fn  NULL, or a function of b returning a list of starts to
+#'   try (and compare) if the primary fit needs the fallback.
+#' @param ids  Resample indices to fit (default all).
+#' @return List: `pars` (tibble, columns NLL_PAR_NAMES) and `diag` (tibble: b,
+#'   value, convergence, best_start, fallback, and one `at_bound_<name>` per
+#'   parameter). See fit_resample() for the `best_start` coding.
+refit_bootstrap <- function(
+  inputs,
+  starts_fn,
+  cores = max(1L, parallel::detectCores() - 1L),
+  fallback_fn = NULL,
+  ids = seq_along(inputs)
+) {
+  one <- function(b) {
+    fb <- if (is.null(fallback_fn)) NULL else fallback_fn(b)
+    fit_resample(inputs[[b]], starts_fn(b), fb)
+  }
+  res <- parallel::mclapply(
+    ids,
+    function(b) try(one(b), silent = TRUE),
+    mc.cores = cores,
+    mc.preschedule = FALSE
+  )
+  bad <- which(vapply(res, inherits, logical(1), what = "try-error"))
+  if (length(bad) > 0) {
+    stop(
+      "refit_bootstrap failed for resample ",
+      ids[bad[1]],
+      ": ",
+      as.character(res[[bad[1]]]),
+      call. = FALSE
+    )
+  }
+  pars <- do.call(rbind, lapply(res, function(r) r$par))
+  at_bound <- do.call(rbind, lapply(res, function(r) r$at_bound))
+  colnames(at_bound) <- paste0("at_bound_", NLL_PAR_NAMES)
+  list(
+    pars = tibble::as_tibble(pars),
+    diag = tibble::tibble(
+      b = ids,
+      value = vapply(res, function(r) r$value, numeric(1)),
+      convergence = vapply(res, function(r) r$convergence, numeric(1)),
+      best_start = vapply(
+        res,
+        function(r) as.integer(r$best_start),
+        integer(1)
+      ),
+      fallback = vapply(res, function(r) r$fallback, logical(1))
+    ) |>
+      dplyr::bind_cols(tibble::as_tibble(at_bound))
+  )
 }
 
 # ----- Bootstrap outputs (shipped RDS inputs) ---------------------------------

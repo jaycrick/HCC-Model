@@ -2,24 +2,25 @@
 #
 # Bootstrap parameter estimation for the HCC surveillance model.
 #
-# IMPORTANT: This script is computationally expensive (bootstrap sampling
-# across 10,000 draws with parallel optimisation).  The pre-computed
-# outputs are shipped in data-derived/ and do NOT need to be regenerated
-# to reproduce the published figures — run_all.R skips this script by default.
+# This script is cheap: it reads the refitted bootstrap parameters
+# (data-derived/resampled_pars.rds), simulates the scenarios and draws the
+# figures. The EXPENSIVE step is the refit of the point MLE and the 10 000
+# bootstrap resamples, done once by tools/refit_calibration.R (gates G8 + G9;
+# exact absorption probabilities, Nelder-Mead + bounded L-BFGS-B polish). That
+# tool also writes data-derived/resampled_pars.rds, its diagnostics and the
+# calibrated rows of data/Parameters*.csv. run_all.R skips this script by
+# default; pass --bootstrap to run it.
 #
-# To regenerate from scratch (requires HPC-scale resources):
-#   Rscript analysis/01_bootstrap_params.R
-#
-# Outputs written to data-derived/:
-#   resampled_pars.rds     — 8 bootstrapped transition parameters (10 000 rows)
-#   resampled_pars_fin.rds — as above plus scenario life-year columns
+# Output written to data-derived/:
+#   resampled_pars_fin.rds — the 8 refitted parameters plus scenario
+#                            life-year columns (10 000 rows)
 #
 # The manuscript values are recorded to output/manuscript_values.csv via
 # record_values() (R/setup.R); data-derived/param_names.rds is a frozen,
 # read-only reference and is no longer written.
 #
-# The saveRDS() calls below that write resampled_pars*.rds are the ONLY writes
-# to data-derived/ in the pipeline. They deliberately regenerate inputs and run
+# The saveRDS() call below that writes resampled_pars_fin.rds is the ONLY write
+# to data-derived/ in this script. It deliberately regenerates an input and runs
 # only when this script is run directly (run_all.R --bootstrap).
 #
 # Sections: (1) estimate, (2) summarise, (3) figures. Reusable pieces live in
@@ -52,13 +53,13 @@ library(hypogeom) # Written for this project by D. Pavlyshyn; see README
 dir.create(here("figures"), showWarnings = FALSE)
 
 # ===== 1. ESTIMATE =====
-# Point estimates are the published values (data/Parameters.csv = paper
-# Tables 1-2). The optimiser below re-derives them as a check; it never
-# overwrites them (finding G7).
+# Point estimates are data/Parameters.csv (written by tools/refit_calibration.R
+# from fit_mle(); finding G7, gate G9). The optimiser below re-derives them as
+# a check; it never overwrites them.
 point_par <- unlist(params_def[NLL_PAR_NAMES])
-fit <- fit_point_estimate(NM_START)
+fit <- fit_mle(list(NM_START, point_par))
 message(
-  "Nelder-Mead vs CSV: max |diff| = ",
+  "fit_mle vs CSV: max |diff| = ",
   signif(max(abs(fit$par - point_par)), 3),
   "; NLL ",
   signif(fit$value, 10),
@@ -66,12 +67,7 @@ message(
   signif(neg_log_lik(point_par), 10)
 )
 
-# The sampling and parallel optimisation ran on an HPC cluster; load its
-# output. The two saveRDS() calls in this script regenerate inputs and run
-# only under --bootstrap.
-set.seed(314)
-resampled_pars <- bootstrap_estimates()
-saveRDS(resampled_pars, file = here("data-derived", "resampled_pars.rds"))
+# The bootstrap refit (tools/refit_calibration.R) wrote these draws.
 resampled_pars <- readRDS(here("data-derived", "resampled_pars.rds"))
 
 set.seed(315)
@@ -110,6 +106,21 @@ record_values(c(
   pcor_logit_0 = unname(pcor_logit["Baseline", "p_0"]),
   pcor_logit_US_0 = unname(pcor_logit["Baseline", "Sens_0"]),
   pcor_logit_US_A = unname(pcor_logit["Baseline", "Sens_A"])
+))
+
+# Rank-based sensitivity check (G9). The logit partial correlations above stay
+# the published method. After the G9 refit, hundreds of resamples sit on the
+# Sens_0 upper bound (logit about 13), so the logit pcor is dominated by those
+# outliers. Ranks are invariant to the logit, so the raw parameters are used.
+pcor_rank <- ppcor::pcor(pars_wide, method = "spearman")$estimate
+fit_diag <- readRDS(here("data-derived", "bootstrap_fit_diagnostics.rds"))$diag
+record_values(c(
+  pcor_rank_0 = unname(pcor_rank["Baseline", "p_0"]),
+  pcor_rank_US_0 = unname(pcor_rank["Baseline", "Sens_0"]),
+  pcor_rank_US_A = unname(pcor_rank["Baseline", "Sens_A"]),
+  n_at_bound_Sens_0 = sum(fit_diag$at_bound_Sens_0),
+  n_fit_nonconverged = sum(fit_diag$convergence != 0),
+  n_fit_fallback = sum(fit_diag$fallback)
 ))
 
 # Results table: bootstrap median and 95% limits; "point" is replaced by the

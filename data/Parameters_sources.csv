@@ -1,12 +1,12 @@
 PARAMETER,SOURCE,TABLE_REF
 p_HCC,Literature (refs 18-22: Sangiovanni 2021; Ioannou 2019; Nahon 2017; El-Serag 2016; van der Meer 2017),Table 2 (annual); LOWER/UPPER: TODO: confirm with author
-p_0,"calibrated (MLE, Supp §2.1.3) from median survival by stage, Giannini 2015",Table 3 (point estimate and 95% CI); Table 1 (monthly)
-p_A,"calibrated (MLE, Supp §2.1.3) from median survival by stage, Giannini 2015",Table 3 (point estimate and 95% CI); Table 1 (monthly)
-p_B,"calibrated (MLE, Supp §2.1.3) from median survival by stage, Giannini 2015",Table 3 (point estimate and 95% CI); Table 1 (monthly)
-p_C,"calibrated (MLE, Supp §2.1.3) from median survival by stage, Giannini 2015",Table 3 (point estimate and 95% CI); Table 1 (monthly)
-p_D,"calibrated (MLE, Supp §2.1.3) from median survival by stage, Giannini 2015",Table 3 (point estimate and 95% CI); Table 1 (monthly)
-Sens_0,"calibrated (MLE, Supp §2.1.3) from Khalili 2015 stage at diagnosis under surveillance",Table 3 (point estimate and 95% CI)
-Sens_A,"calibrated (MLE, Supp §2.1.3) from Khalili 2015 stage at diagnosis under surveillance",Table 3 (point estimate and 95% CI)
+p_0,"calibrated (MLE via Nelder-Mead + bounded logit L-BFGS-B, multi-start (G9); exact absorption probabilities (G8); Supp §2.1.3) from median survival by stage, Giannini 2015",Table 3 (point estimate and 95% CI); Table 1 (monthly)
+p_A,"calibrated (MLE via Nelder-Mead + bounded logit L-BFGS-B, multi-start (G9); exact absorption probabilities (G8); Supp §2.1.3) from median survival by stage, Giannini 2015",Table 3 (point estimate and 95% CI); Table 1 (monthly)
+p_B,"calibrated (MLE via Nelder-Mead + bounded logit L-BFGS-B, multi-start (G9); exact absorption probabilities (G8); Supp §2.1.3) from median survival by stage, Giannini 2015",Table 3 (point estimate and 95% CI); Table 1 (monthly)
+p_C,"calibrated (MLE via Nelder-Mead + bounded logit L-BFGS-B, multi-start (G9); exact absorption probabilities (G8); Supp §2.1.3) from median survival by stage, Giannini 2015",Table 3 (point estimate and 95% CI); Table 1 (monthly)
+p_D,"calibrated (MLE via Nelder-Mead + bounded logit L-BFGS-B, multi-start (G9); exact absorption probabilities (G8); Supp §2.1.3) from median survival by stage, Giannini 2015",Table 3 (point estimate and 95% CI); Table 1 (monthly)
+Sens_0,"calibrated (MLE via Nelder-Mead + bounded logit L-BFGS-B, multi-start (G9); exact absorption probabilities (G8); Supp §2.1.3) from Khalili 2015 stage at diagnosis under surveillance",Table 3 (point estimate and 95% CI)
+Sens_A,"calibrated (MLE via Nelder-Mead + bounded logit L-BFGS-B, multi-start (G9); exact absorption probabilities (G8); Supp §2.1.3) from Khalili 2015 stage at diagnosis under surveillance",Table 3 (point estimate and 95% CI)
 Sens_B,"Informed by refs 8, 23, 24 (Hong 2018; Khalili 2015; Tzartzeva 2018)",Table 2; LOWER/UPPER: TODO: confirm with author
 Sens_C,"Informed by refs 8, 23, 24 (Hong 2018; Khalili 2015; Tzartzeva 2018)",Table 2; LOWER/UPPER: TODO: confirm with author
 Sens_D,"Informed by refs 8, 23, 24 (Hong 2018; Khalili 2015; Tzartzeva 2018)",Table 2; LOWER/UPPER: TODO: confirm with author
@@ -19,7 +19,7 @@ L_B,Derived from Lee 2017 (ref 17),Table 2; LOWER/UPPER: TODO: confirm with auth
 L_C,Derived from Lee 2017 (ref 17),Table 2; LOWER/UPPER: TODO: confirm with author
 L_D,Derived from Lee 2017 (ref 17),Table 2; LOWER/UPPER: TODO: confirm with author
 Sym_0,Informed by Hong 2018 (ref 8),Table 2; LOWER/UPPER: TODO: confirm with author
-Sym_A,"calibrated (MLE, Supp §2.1.3) from Hong 2018",Table 3 (point estimate and 95% CI)
-Sym_B,"calibrated (MLE, Supp §2.1.3 footnote 4): 8 x Sym_A, midpoint of Sym_A=0 and Sym_B=0 MLEs",Table 3 (point estimate and 95% CI)
+Sym_A,"calibrated (MLE via Nelder-Mead + bounded logit L-BFGS-B, multi-start (G9); exact absorption probabilities (G8); Supp §2.1.3) from Hong 2018",Table 3 (point estimate and 95% CI)
+Sym_B,"calibrated (MLE via Nelder-Mead + bounded logit L-BFGS-B, multi-start (G9); exact absorption probabilities (G8); Supp §2.1.3 footnote 4): 8 x Sym_A, midpoint of Sym_A=0 and Sym_B=0 MLEs",Table 3 (point estimate and 95% CI)
 Sym_C,Informed by Hong 2018 (ref 8),Table 2; LOWER/UPPER: TODO: confirm with author
 Sym_D,Informed by Hong 2018 (ref 8),Table 2; LOWER/UPPER: TODO: confirm with author
