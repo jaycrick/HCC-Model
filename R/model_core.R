@@ -224,10 +224,13 @@ life_add <- function(..., n = 100, t = 120, m = 6, params = params_def) {
 # ----- Sensitivity-analysis helpers -------------------------------------------
 
 #' Build a one-row tibble of named parameter values for use with pmap.
+#'
+#' @param Parameter  Parameter name (length 1).
+#' @param value      Its value.
+#' @param ...        Ignored (pmap passes the other columns of the table).
+#' @return One-row tibble with one column, named `Parameter`.
 dfs <- function(Parameter, value, ...) {
-  new_df <- tibble(Parameter, value) %>%
-    pivot_wider(names_from = Parameter, values_from = value)
-  return(new_df)
+  tibble::as_tibble_row(setNames(value, Parameter))
 }
 
 #' Keep only the model-parameter columns of a draws tibble.
@@ -239,6 +242,23 @@ dfs <- function(Parameter, value, ...) {
 #' @param df  Tibble of parameter draws (one row per draw).
 #' @return `df` restricted to columns named in `names(params_def)`.
 draws <- function(df) select(df, any_of(names(params_def)))
+
+#' Parameter draws ready for the model: the parameter columns of `df` with
+#' `Sym_B = SYM_B_RATIO * Sym_A` set from each draw's Sym_A.
+#'
+#' Sym_B is not estimated (Supplement Sec. 2.1.3, footnote 4), so every
+#' bootstrap analysis, the scenarios and every sweep, must derive it from the
+#' draw's Sym_A rather than keep the default Sym_B. This is the one place that
+#' does it. If `df` has no Sym_A column, the default Sym_A is used.
+#'
+#' @param df  Tibble of parameter draws (one row per draw).
+#' @return `draws(df)` with a `Sym_B` column (replacing any existing one).
+prepare_draws <- function(df) {
+  out <- draws(df)
+  sym_a <- if ("Sym_A" %in% names(out)) out$Sym_A else params_def$Sym_A
+  out$Sym_B <- SYM_B_RATIO * sym_a
+  out
+}
 
 #' Apply life_add across each row of a data-frame of parameter draws.
 years <- function(df) pmap_dbl(df, life_add)

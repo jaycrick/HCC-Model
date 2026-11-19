@@ -32,6 +32,7 @@ source(here::here("R", "setup.R"))
 source(here::here("R", "model_core.R"))
 source(here::here("R", "bootstrap.R"))
 source(here::here("R", "scenarios.R"))
+source(here::here("R", "plotting.R"))
 
 library(hypogeom) # Written for this project by D. Pavlyshyn; see README for install
 library(parallel)
@@ -135,18 +136,13 @@ ggplot(bootstrapped_data_long, aes(x = value)) +
   theme_bw(base_family = "serif", base_size = 12) +
   scale_y_continuous(expand = expansion(c(0, 0.05)))
 
-ggsave(here("figures", "Bootstrap_sample_ranges.jpg"), width = 6, height = 4)
-ggsave(
-  here("figures", "Bootstrap_sample_ranges.png"),
-  width = 6,
-  height = 4,
-  dpi = 600
-)
-ggsave(
-  here("figures", "Bootstrap_sample_ranges.pdf"),
-  width = 6,
-  height = 4,
-  dpi = 600
+save_figure(
+  last_plot(),
+  "Bootstrap_sample_ranges",
+  6,
+  4,
+  formats = c("jpg", "png", "pdf"),
+  dpi = c(jpg = 300, png = 600, pdf = 600)
 )
 
 # ----- Process MLE outputs from cluster job -----------------------------------
@@ -198,7 +194,7 @@ param_names[c("muA_gt_mu0")] <- table(
 saveRDS(param_names, file = here("data-derived", "param_names.rds"))
 
 # ----- Rates table for plotting -----------------------------------------------
-variable_labels <- c(
+rate_labels <- c(
   "p_0" = "BCLC Stage\n0 to A HCC",
   "p_A" = "BCLC Stage\nA to B HCC",
   "p_B" = "BCLC Stage\nB to C HCC",
@@ -206,23 +202,12 @@ variable_labels <- c(
   "p_D" = "BCLC Stage\nD HCC to Death"
 )
 
+rate_ci <- vapply(resampled_pars[STAGE_P_NAMES], summarise_ci, numeric(2))
 rates_tbl <- tibble(
-  rate = factor(c("p_0", "p_A", "p_B", "p_C", "p_D")),
+  rate = factor(STAGE_P_NAMES),
   Point = hypo_probs[1:5],
-  Lower = c(
-    quantile(resampled_pars$`p_0`, 0.025),
-    quantile(resampled_pars$p_A, 0.025),
-    quantile(resampled_pars$p_B, 0.025),
-    quantile(resampled_pars$p_C, 0.025),
-    quantile(resampled_pars$p_D, 0.025)
-  ),
-  Upper = c(
-    quantile(resampled_pars$`p_0`, 0.975),
-    quantile(resampled_pars$p_A, 0.975),
-    quantile(resampled_pars$p_B, 0.975),
-    quantile(resampled_pars$p_C, 0.975),
-    quantile(resampled_pars$p_D, 0.975)
-  )
+  Lower = unname(rate_ci["lower", ]),
+  Upper = unname(rate_ci["upper", ])
 )
 
 ggplot(
@@ -236,12 +221,12 @@ ggplot(
     inherit.aes = FALSE,
     colour = "red"
   ) +
-  scale_x_discrete(labels = variable_labels) +
+  scale_x_discrete(labels = rate_labels) +
   labs(x = NULL, y = "Probability of\nProgressing per Month") +
   theme_bw(base_family = "serif", base_size = 12) +
   scale_y_continuous(limits = c(0, 1), expand = expansion(0))
 
-ggsave(here("figures", "HCC_Rates_Range_Plot.jpg"), width = 6, height = 3)
+save_figure(last_plot(), "HCC_Rates_Range_Plot", 6, 3, "jpg", dpi = 300)
 
 resampled_rates_long <- resampled_pars[1:5] %>%
   pivot_longer(everything(), names_to = "rate") %>%
@@ -259,9 +244,14 @@ ggplot(resampled_rates_long, aes(value)) +
   theme_bw(base_family = "serif", base_size = 12) +
   scale_y_continuous(expand = expansion(c(0, 0.05)))
 
-ggsave(here("figures", "HCC_Rates_Hist.jpg"), width = 6, height = 7)
-ggsave(here("figures", "HCC_Rates_Hist.png"), dpi = 600, width = 6, height = 7)
-ggsave(here("figures", "HCC_Rates_Hist.pdf"), dpi = 600, width = 6, height = 7)
+save_figure(
+  last_plot(),
+  "HCC_Rates_Hist",
+  6,
+  7,
+  formats = c("jpg", "png", "pdf"),
+  dpi = c(jpg = 300, png = 600, pdf = 600)
+)
 
 ggplot(
   resampled_pars[1:5] %>% pivot_longer(everything()),
@@ -279,18 +269,13 @@ ggplot(
   theme_bw(base_family = "serif", base_size = 12) +
   scale_y_continuous(limits = c(0, 1), expand = expansion(0))
 
-ggsave(here("figures", "HCC_Rates_Violin.jpg"), width = 6, height = 4)
-ggsave(
-  here("figures", "HCC_Rates_Violin.png"),
-  dpi = 600,
-  width = 6,
-  height = 4
-)
-ggsave(
-  here("figures", "HCC_Rates_Violin.pdf"),
-  dpi = 600,
-  width = 6,
-  height = 4
+save_figure(
+  last_plot(),
+  "HCC_Rates_Violin",
+  6,
+  4,
+  formats = c("jpg", "png", "pdf"),
+  dpi = c(jpg = 300, png = 600, pdf = 600)
 )
 
 mean_years_tbl <- resampled_pars[1:5] %>%
@@ -346,25 +331,13 @@ param_names[c(
 )] <- 1 / rates_tbl$Lower / 12
 saveRDS(param_names, file = here("data-derived", "param_names.rds"))
 
-ggsave(
-  here("figures", "HCC_Time_Range_Plot.jpg"),
+save_figure(
   HCC_Time_Range_Plot,
-  width = 6,
-  height = 4
-)
-ggsave(
-  here("figures", "HCC_Time_Range_Plot.png"),
-  HCC_Time_Range_Plot,
-  width = 6,
-  height = 4,
-  dpi = 600
-)
-ggsave(
-  here("figures", "HCC_Time_Range_Plot.pdf"),
-  HCC_Time_Range_Plot,
-  width = 6,
-  height = 4,
-  dpi = 600
+  "HCC_Time_Range_Plot",
+  6,
+  4,
+  formats = c("jpg", "png", "pdf"),
+  dpi = c(jpg = 300, png = 600, pdf = 600)
 )
 
 set.seed(315)
@@ -410,25 +383,13 @@ US_sensitivity_Cal <- ggplot(resampled_pars, aes(x = Sens_0, y = Sens_A)) +
 
 US_sensitivity_Cal
 
-ggsave(
-  here("figures", "US_sensitivity_Cal.jpg"),
+save_figure(
   US_sensitivity_Cal,
-  height = 3.5,
-  width = 6
-)
-ggsave(
-  here("figures", "US_sensitivity_Cal.png"),
-  US_sensitivity_Cal,
-  height = 3.5,
-  width = 6,
-  dpi = 600
-)
-ggsave(
-  here("figures", "US_sensitivity_Cal.pdf"),
-  US_sensitivity_Cal,
-  height = 3.5,
-  width = 6,
-  dpi = 600
+  "US_sensitivity_Cal",
+  6,
+  3.5,
+  formats = c("jpg", "png", "pdf"),
+  dpi = c(jpg = 300, png = 600, pdf = 600)
 )
 
 summary(resampled_pars$Sens_0)
@@ -510,18 +471,13 @@ ggplot(resampled_pars, aes(x = Baseline)) +
   ) +
   labs(x = "Life Years Gained", y = "Density")
 
-ggsave(here("figures", "bootstrap_var_base.jpg"), width = 6, height = 3)
-ggsave(
-  here("figures", "bootstrap_var_base.png"),
-  width = 6,
-  height = 3,
-  dpi = 600
-)
-ggsave(
-  here("figures", "bootstrap_var_base.pdf"),
-  width = 6,
-  height = 3,
-  dpi = 600
+save_figure(
+  last_plot(),
+  "bootstrap_var_base",
+  6,
+  3,
+  formats = c("jpg", "png", "pdf"),
+  dpi = c(jpg = 300, png = 600, pdf = 600)
 )
 
 param_names <- readRDS(here("data-derived", "param_names.rds"))
@@ -604,12 +560,7 @@ plot_par_cor_logit <- ggplot(
 
 plot_par_cor_logit
 
-ggsave(
-  here("figures", "plot_par_cor_logit.jpg"),
-  plot = plot_par_cor_logit,
-  width = 6,
-  height = 5
-)
+save_figure(plot_par_cor_logit, "plot_par_cor_logit", 6, 5, "jpg", dpi = 300)
 
 pcor_base_logit <- long_pcor_logit %>%
   dplyr::filter(row == "Baseline" & col != "Baseline") %>%
@@ -629,25 +580,13 @@ plot_cor_base_logit <- ggplot(
 
 plot_cor_base_logit
 
-ggsave(
-  here("figures", "plot_cor_base_logit.jpg"),
-  plot = plot_cor_base_logit,
-  width = 6,
-  height = 3
-)
-ggsave(
-  here("figures", "plot_cor_base_logit.png"),
-  plot = plot_cor_base_logit,
-  width = 6,
-  height = 3,
-  dpi = 600
-)
-ggsave(
-  here("figures", "plot_cor_base_logit.pdf"),
-  plot = plot_cor_base_logit,
-  width = 6,
-  height = 3,
-  dpi = 600
+save_figure(
+  plot_cor_base_logit,
+  "plot_cor_base_logit",
+  6,
+  3,
+  formats = c("jpg", "png", "pdf"),
+  dpi = c(jpg = 300, png = 600, pdf = 600)
 )
 
 detach("package:ppcor", unload = TRUE)
@@ -721,144 +660,26 @@ results_tbl <- results_tbl %>%
 
 # Recreate plot_univar_mod (25%-variation univariate sensitivity)
 param_tbl_25 <- life_tibble(here("data", "Parameters_25.csv"))
-param_chang_tbl <- param_tbl_25 %>%
-  dplyr::filter(
-    years_mid_comp != 0,
-    !Parameter %in%
-      c(
-        "p_HCC",
-        "p_0",
-        "p_A",
-        "p_B",
-        "p_C",
-        "p_D",
-        "Sym_0",
-        "Sym_A",
-        "Sym_B",
-        "Sym_C",
-        "Sym_D"
-      )
-  ) %>%
-  mutate(
-    Parameter = fct_reorder(.f = Parameter, .x = years_mid_comp, abssum),
-    Type = factor(
-      word(Parameter, sep = fixed("_")),
-      levels = c("Pr", "Sens", "L", "p", "Sym")
-    )
-  ) %>%
-  dplyr::select(Parameter, Bound, years_mid_comp, Type)
-
-facet_labels <- c(
-  L = "Treatment Quality",
-  Pr = "Adherence\nto Screening",
-  p = "Monthly Risk",
-  Sym = "Monthly probability\nof symptoms",
-  Sens = "Ultrasound\nSensitivity"
+plot_univar_mod <- plot_tornado(
+  modifiable_sensitivity(param_tbl_25),
+  "years_mid_comp",
+  x_lab = "Additional Life Years Gained",
+  y_lab = NULL,
+  facet = "group"
 )
 
-plot_univar_mod <- ggplot(
-  param_chang_tbl,
-  aes(y = Parameter, x = years_mid_comp)
-) +
-  geom_col(position = "identity", colour = "black") +
-  labs(x = "Additional Life Years Gained", y = NULL, title = NULL) +
-  theme_bw(base_family = "serif", base_size = 12) +
-  scale_y_discrete(labels = TeX_labels) +
-  facet_wrap(
-    ~Type,
-    ncol = 1,
-    scales = "free_y",
-    labeller = labeller(Type = facet_labels)
-  )
-
 # Variant plots with rotated labels for multipanel layout
-HCC_Time_Range_Plot_side_labs <- ggplot(
-  mean_years_tbl %>%
-    group_by(name) %>%
-    summarise(
-      mean025 = quantile(mean_years, 0.025),
-      mean975 = quantile(mean_years, 0.975)
-    ),
-  aes(name, ymin = mean025, ymax = mean975)
-) +
-  geom_errorbar() +
-  geom_point(
-    mapping = aes(x = rate, y = 1 / Point / 12),
-    data = rates_tbl,
-    inherit.aes = FALSE
-  ) +
-  scale_x_discrete(
-    labels = c(
-      p_0 = "BCLC Stage 0",
-      p_A = "BCLC Stage A",
-      p_B = "BCLC Stage B",
-      p_C = "BCLC Stage C",
-      p_D = "BCLC Stage D"
-    )
-  ) +
-  labs(x = NULL, y = "Mean Number of\nYears In BCLC Stage") +
-  theme_bw(base_family = "serif", base_size = 12) +
-  scale_y_continuous(limits = c(0, 3), expand = expansion(0)) +
+HCC_Time_Range_Plot_side_labs <- HCC_Time_Range_Plot +
   theme(axis.text.x = element_text(angle = 60, hjust = 1))
 
-plot_cor_base_logit_side_labs <- ggplot(
-  pcor_base_logit,
-  aes(x = Variable, y = value, fill = value)
-) +
-  geom_col(colour = "black") +
-  scale_fill_gradient2(limit = c(-1, 1), low = "red", high = "#075AFF") +
-  theme_bw(base_family = "serif", base_size = 12) +
-  labs(y = "Partial Correlation Coefficient", x = NULL) +
-  guides(fill = guide_colourbar(title = NULL)) +
-  scale_y_continuous(limits = c(-1, 1), expand = expansion(0)) +
-  scale_x_discrete(labels = TeX_labels) +
+plot_cor_base_logit_side_labs <- plot_cor_base_logit +
   theme(
     axis.text.x = element_text(angle = 60, hjust = 1),
     legend.position = "bottom"
   )
 
-US_sensitivity_Cal_side_labs <- ggplot(
-  resampled_pars,
-  aes(x = Sens_0, y = Sens_A)
-) +
-  geom_area(
-    aes(x = seq(0, 1, length.out = 10000), y = seq(0, 1, length.out = 10000)),
-    alpha = 0.25
-  ) +
-  geom_hex(alpha = 0.75, bins = c(100, 80)) +
-  theme_bw(base_family = "serif", base_size = 12) +
-  scale_fill_viridis(
-    option = "C",
-    trans = "log",
-    breaks = c(1, 2, 5, 10, 20, 35)
-  ) +
-  scale_x_continuous(
-    labels = label_percent(),
-    expand = expansion(0),
-    limits = c(0, 1)
-  ) +
-  scale_y_continuous(
-    labels = label_percent(),
-    expand = expansion(0),
-    limits = c(0, 1)
-  ) +
-  geom_point(
-    aes(x = params_def$Sens_0, y = params_def$Sens_A),
-    shape = 4,
-    stroke = 1,
-    size = 1,
-    colour = "black"
-  ) +
-  labs(
-    x = "BCLC Stage 0 HCC\nUltrasound Sensitivity",
-    y = "BCLC Stage A HCC\nUltrasound Sensitivity",
-    fill = "Number of\nSamples"
-  ) +
-  theme(
-    plot.title = element_text(hjust = 0.5),
-    legend.title = element_text(hjust = 0.5),
-    legend.position = "bottom"
-  )
+US_sensitivity_Cal_side_labs <- US_sensitivity_Cal +
+  theme(legend.position = "bottom")
 
 multipanel_cals <- plot_grid(
   HCC_Time_Range_Plot_side_labs,
@@ -871,5 +692,11 @@ multipanel_cals <- plot_grid(
 
 multipanel_cals
 
-ggsave(here("figures", "multipanel_cals.png"), width = 6, height = 8, dpi = 600)
-ggsave(here("figures", "multipanel_cals.pdf"), width = 6, height = 8, dpi = 600)
+save_figure(
+  multipanel_cals,
+  "multipanel_cals",
+  6,
+  8,
+  formats = c("png", "pdf"),
+  dpi = c(png = 600, pdf = 600)
+)

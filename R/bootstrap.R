@@ -30,7 +30,7 @@ neg_log_lik <- function(
   US_00 <- hypo_probs[6]
   US_Aa <- hypo_probs[7]
   Sym_Aa <- hypo_probs[8]
-  Sym_Bb <- SYM_B_RATIO * Sym_Aa # nolint: object_usage_linter.
+  Sym_Bb <- SYM_B_RATIO * Sym_Aa
 
   matrix_of_trans <- matrix(
     c(
@@ -111,7 +111,7 @@ neg_log_lik <- function(
   ) %*%
     (matrix_of_trans %^% 100)
 
-  NLL <- -(dOrder(
+  NLL <- -(DescTools::dOrder(
     meds[5] - 1,
     distn = "hypogeom",
     probs = hypo_probs[5],
@@ -119,7 +119,7 @@ neg_log_lik <- function(
     j = 210 / 2,
     log = TRUE
   ) +
-    dOrder(
+    DescTools::dOrder(
       meds[4] - 2,
       distn = "hypogeom",
       probs = hypo_probs[4:5],
@@ -127,7 +127,7 @@ neg_log_lik <- function(
       j = 138 / 2,
       log = TRUE
     ) +
-    dOrder(
+    DescTools::dOrder(
       meds[3] - 3,
       distn = "hypogeom",
       probs = hypo_probs[3:5],
@@ -135,7 +135,7 @@ neg_log_lik <- function(
       j = 140 / 2,
       log = TRUE
     ) +
-    dOrder(
+    DescTools::dOrder(
       meds[2] - 4,
       distn = "hypogeom",
       probs = hypo_probs[2:5],
@@ -143,7 +143,7 @@ neg_log_lik <- function(
       j = 102 / 2,
       log = TRUE
     ) +
-    dOrder(
+    DescTools::dOrder(
       meds[1] - 5,
       distn = "hypogeom",
       probs = hypo_probs[1:5],

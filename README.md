@@ -66,7 +66,7 @@ This installs all packages at the exact versions recorded in `renv.lock`.
 ├── R/                      # Pure function definitions (sourced, not run directly)
 │   ├── setup.R             # Libraries, seeds, constants, default parameters
 │   ├── model_core.R        # Markov transitions, US detection, adherence model
-│   ├── progression.R       # Figure-generating analysis functions
+│   ├── plotting.R          # Theme, save_figure(), sweeps, tornado and scenario plots
 │   ├── simulation.R        # Stochastic simulation functions (exploratory)
 │   └── bootstrap.R         # Bootstrap likelihood and scenario functions
 ├── analysis/               # Numbered analysis scripts (run in order)
@@ -201,14 +201,14 @@ curl -fsSL https://github.com/posit-dev/air/releases/latest/download/air-install
 
 | Hook | What it does |
 |------|-------------|
-| `pre-commit` | Runs `air format` on staged `.R` files and re-stages them automatically, then runs the lint ratchet on them and blocks the commit if any file has more lints than its baseline |
+| `pre-commit` | Runs `air format` on staged `.R` files and re-stages them automatically, then runs the lint ratchet on them and blocks the commit if any file has more lints than its baseline; finally `tools/check_globals.R` (codetools) blocks the commit if any project function uses an undefined name |
 | `commit-msg` | Enforces [git3moji](https://robinpokorny.github.io/git3moji/) prefixes: `:zap:` `:bug:` `:tv:` `:cop:` `:abc:` |
 
 Format any file manually with `air format <file.R>`, or format the whole project with `air format .`.
 
 ### Lint ratchet
 
-Lint rules live in `.lintr` (line length 80 to match `air.toml`; `object_name_linter` and `indentation_linter` are disabled because the code follows paper notation such as `p_HCC` and air owns formatting).
+Lint rules live in `.lintr` (line length 80 to match `air.toml`; `object_usage_linter` is off because it cannot see across the sourced `R/` files, and `tools/check_globals.R` does that job; `object_name_linter` and `indentation_linter` are disabled because the code follows paper notation such as `p_HCC` and air owns formatting).
 The legacy code still has many lints, so instead of a hard zero-lint gate the repository uses a ratchet: `tools/lint_baseline.csv` records each file's allowed lint count, and a file may never exceed it.
 A file not in the baseline must have zero lints.
 
@@ -232,7 +232,7 @@ Never run `run_all.R` as a test; it takes about 30 minutes.
 ### Continuous integration
 
 `.github/workflows/check.yml` runs on every push and pull request (Ubuntu, R version and packages from `renv.lock`).
-It runs `air format --check .`, the lint ratchet, and the test suite.
+It runs `air format --check .`, the lint ratchet, `tools/check_globals.R` and the test suite.
 
 ---
 

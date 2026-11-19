@@ -12,6 +12,7 @@ source(here::here("R", "setup.R"))
 source(here::here("R", "model_core.R"))
 source(here::here("R", "bootstrap.R"))
 source(here::here("R", "scenarios.R"))
+source(here::here("R", "plotting.R"))
 
 # Observed data and the hard-coded point estimates used by analysis/01
 # (copied verbatim from analysis/01_bootstrap_params.R; neg_log_lik()'s

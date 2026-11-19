@@ -7,10 +7,6 @@
 # (low / high HCC incidence): Supplementary Figs. S6-S7.
 # To change a scenario, edit its entry in `scenario_defs` (and nothing else).
 
-# Functions and objects from the other sourced files (setup.R, model_core.R)
-# and tidy-evaluation operators are invisible to the per-file linter.
-# nolint start: object_usage_linter.
-
 # ----- Scenario definitions ---------------------------------------------------
 
 #' Scenario modifiers: pure functions `params -> params`.
@@ -134,9 +130,9 @@ stopifnot(identical(scenario_table$id, names(scenario_defs)))
 #'                      must contain `baseline`.
 #' @param risk          Named numeric multipliers on the draw's p_HCC
 #'                      (`risk_multipliers`).
-#' @param derive_sym_b  TRUE (default) for bootstrap draws: set
-#'                      `Sym_B = SYM_B_RATIO * Sym_A` from the draw's Sym_A,
-#'                      because Sym_B is not estimated. FALSE for point
+#' @param derive_sym_b  TRUE (default) for bootstrap draws: `prepare_draws()`
+#'                      sets `Sym_B = SYM_B_RATIO * Sym_A` from the draw's
+#'                      Sym_A, because Sym_B is not estimated. FALSE for point
 #'                      estimates at default parameters, where Sym_B is taken
 #'                      from `params_def` as `life_add()` does.
 #' @return Long tibble with columns draw (row index), scenario, risk, ly (life
@@ -149,12 +145,9 @@ run_scenarios <- function(
   derive_sym_b = TRUE
 ) {
   stopifnot("defs needs a 'baseline' scenario" = "baseline" %in% names(defs))
-  rows <- draws(param_rows)
+  rows <- if (derive_sym_b) prepare_draws(param_rows) else draws(param_rows)
   one_draw <- function(i, mult, def) {
     p <- modify_params(params_def, as.list(rows[i, ]))
-    if (derive_sym_b) {
-      p$Sym_B <- SYM_B_RATIO * p$Sym_A
-    }
     p$p_HCC <- p$p_HCC * mult
     life_add(params = def(p))
   }
@@ -216,78 +209,3 @@ scenario_columns <- function(long) {
   )
   tibble::as_tibble(cols)
 }
-
-# ----- Scenario-difference figure (minimal; generalised in S5) ----------------
-
-#' Point estimates, 95% intervals and bootstrap draws of the life-year gain of
-#' each improvement scenario over baseline, for one risk level.
-#'
-#' @param point  `run_scenarios()` output at default parameters.
-#' @param boot   Wide bootstrap results (legacy columns) with the `_diff`
-#'               columns of `scenario_columns()`.
-#' @param risk   Risk level, a name of `risk_multipliers`.
-#' @return List: `points` (Scenario, `Life Years per Cohort of 100`, type,
-#'   lowCI, highCI, ledger_key) and `violin` (Scenario, `Life Years per Cohort
-#'   of 100` for every bootstrap draw), both in the order treatment, diagnosis,
-#'   optimistic adherence, realistic adherence.
-scenario_diff_data <- function(point, boot, risk) {
-  sfx <- ifelse(risk == "base", "", paste0("_", risk))
-  tbl <- scenario_table[scenario_table$id != "baseline", ]
-  tbl <- tbl[rev(seq_len(nrow(tbl))), ]
-  boot_col <- paste0(tbl$column, "_diff", sfx)
-  y <- "Life Years per Cohort of 100"
-  points <- tibble::tibble(
-    Scenario = tbl$label,
-    !!y := point$diff[point$risk == risk][match(
-      tbl$id,
-      point$scenario[point$risk == risk]
-    )],
-    type = "Point\nEstimate",
-    lowCI = vapply(
-      boot_col,
-      \(cl) as.double(quantile(boot[[cl]], 0.025)),
-      numeric(1)
-    ),
-    highCI = vapply(
-      boot_col,
-      \(cl) as.double(quantile(boot[[cl]], 0.975)),
-      numeric(1)
-    ),
-    ledger_key = tbl$ledger_key
-  )
-  violin <- tibble::tibble(
-    Scenario = rep(tbl$label, each = nrow(boot)),
-    !!y := unlist(boot[boot_col], use.names = FALSE)
-  )
-  list(points = points, violin = violin)
-}
-
-#' Violin plot of scenario gains with point estimates (Figs. in
-#' figures/scenarios_new*.{jpg,png,pdf}).
-#'
-#' @param d     Output of `scenario_diff_data()`.
-#' @param xlab  x-axis label.
-#' @param ymax  Upper y limit.
-plot_scenario_violins <- function(d, xlab, ymax) {
-  y <- "Life Years per Cohort of 100"
-  ggplot(d$violin, aes(Scenario, .data[[y]])) +
-    geom_violin(trim = TRUE) +
-    theme_bw(base_family = "serif", base_size = 12) +
-    scale_x_discrete(
-      limits = scenario_table$label[scenario_table$id != "baseline"]
-    ) +
-    labs(x = xlab) +
-    theme(
-      legend.position = "right",
-      legend.title = element_blank(),
-      axis.text.x = element_text(angle = 30, vjust = 1, hjust = 1)
-    ) +
-    geom_point(
-      data = d$points,
-      aes(Scenario, .data[[y]], shape = type),
-      size = 3,
-      show.legend = TRUE
-    ) +
-    scale_y_continuous(limits = c(0, ymax), expand = expansion(0))
-}
-# nolint end

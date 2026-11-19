@@ -20,6 +20,7 @@ Imports:
     tidyverse,
     viridis
 Suggests:
+    codetools,
     testthat (>= 3.0.0),
     lintr
 Remotes:

@@ -10,7 +10,6 @@ source(here::here("tests", "testthat", "helper-setup.R"))
 
 rows <- resampled_pars_fin[1:20, ]
 scen_ly <- function(id) {
-  # nolint next: object_usage_linter.
   long <- run_scenarios(rows, risk = risk_multipliers["base"])
   long$ly[long$scenario == id]
 }

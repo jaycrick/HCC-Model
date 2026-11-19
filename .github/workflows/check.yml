@@ -38,5 +38,8 @@ jobs:
       - name: Lint ratchet
         run: Rscript tools/lint_ratchet.R
 
+      - name: Undefined names
+        run: Rscript tools/check_globals.R
+
       - name: Tests
         run: Rscript -e 'testthat::test_dir("tests/testthat", stop_on_failure = TRUE)'

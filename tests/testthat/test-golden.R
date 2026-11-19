@@ -70,7 +70,6 @@ test_that("neg_log_lik(hypo_probs) value is stable", {
 
 # life-years of one scenario on rows20 at base risk, via the scenarios API
 scen_ly <- function(id) {
-  # nolint next: object_usage_linter.
   long <- run_scenarios(rows20, risk = risk_multipliers["base"])
   long$ly[long$scenario == id]
 }

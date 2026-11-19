@@ -112,10 +112,6 @@ TeX_labels <- lapply(tex_param_names, function(nm) {
     # `NA` needs backticks in plotmath, so TeX() cannot be used here
     return(expression(italic(p)[`NA`]))
   }
-  if (nm == "p_B") {
-    # G2: preserved bug, p_B renders as p_C
-    parts <- c("p", "C")
-  }
   tex_label(parts[1], parts[2], italic = parts[1] %in% c("p", "L"))
 })
 TeX_labels <- do.call(c, TeX_labels) # expression vector, as before
@@ -140,4 +136,87 @@ Boot_labels <- do.call(
     }),
     recursive = FALSE
   )
+)
+
+# ----- Parameter groups and labels (one lookup) -------------------------------
+
+# Facet groups, in plotting order, with their facet labels. Adherence is its own
+# group (p_NA, p_CA, p_Att), separate from the monthly transition probabilities.
+group_labels <- c(
+  Adherence = "Adherence\nto Screening",
+  Sens = "Ultrasound\nSensitivity",
+  L = "Treatment Quality",
+  p = "Monthly Risk",
+  Sym = "Monthly probability\nof symptoms"
+)
+
+#' Group of each parameter: the adherence parameters, else the name prefix
+#' (Sens, L, p = transition probabilities incl. p_HCC, Sym).
+#'
+#' @param nm  Parameter names.
+#' @return Character vector of group names (names of `group_labels`).
+param_group <- function(nm) {
+  ifelse(
+    nm %in% c("p_NA", "p_CA", "p_Att"),
+    "Adherence",
+    vapply(strsplit(nm, "_", fixed = TRUE), `[`, "", 1)
+  )
+}
+
+# Axis labels of the parameters inside their group.
+.variable_labels <- c(
+  L_0 = "Stage 0",
+  L_A = "Stage A",
+  L_B = "Stage B",
+  L_C = "Stage C",
+  L_D = "Stage D",
+  p_CA = "Completely adherent",
+  p_NA = "Non-adherent",
+  p_Att = "Attendence probability\nwithin partial adherents",
+  p_HCC = "Developing HCC",
+  p_0 = "Stage 0 to A",
+  p_A = "Stage A to B HCC",
+  p_B = "Stage B to C HCC",
+  p_C = "Stage C to D HCC",
+  p_D = "Stage D to Death",
+  Sym_0 = "Stage 0",
+  Sym_A = "Stage A",
+  Sym_B = "Stage B",
+  Sym_C = "Stage C",
+  Sym_D = "Stage D",
+  Sens_0 = "Stage 0",
+  Sens_A = "Stage A",
+  Sens_B = "Stage B",
+  Sens_C = "Stage C",
+  Sens_D = "Stage D"
+)
+
+# The single lookup: one row per parameter of `params_def`.
+param_lookup <- tibble::tibble(
+  parameter = names(params_def),
+  group = param_group(names(params_def)),
+  label = unname(.variable_labels[names(params_def)])
+)
+
+# Derived, never edited separately: axis labels per parameter, and facet labels
+# (parameter groups, plus the low/high-HCC-rate columns of the sensitivity
+# grid).
+variable_labels <- setNames(param_lookup$label, param_lookup$parameter)
+facet_labels <- c(
+  group_labels,
+  years_low_comp = "Lower Rate of HCC",
+  years_high_comp = "Higher Rate of HCC"
+)
+
+# Parameters that no intervention can change (disease progression, symptom
+# probabilities, HCC incidence): excluded from the "modifiable" sensitivity
+# plots.
+NON_MODIFIABLE_PARAMS <- c(
+  "p_HCC",
+  "p_0",
+  "p_A",
+  "p_B",
+  "p_C",
+  "p_D",
+  paste0("Sym_", c("0", "A", "B", "C", "D"))
 )

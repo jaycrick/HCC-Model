@@ -33,4 +33,17 @@ else
   echo "WARNING: Rscript not found — skipping lint ratchet." >&2
 fi
 
+# Undefined-name check over the project functions (codetools; see
+# tools/check_globals.R). Runs on the whole project, not just staged files,
+# because a change in one R/ file can break a function in another.
+if command -v Rscript >/dev/null 2>&1; then
+  if ! Rscript tools/check_globals.R >&2; then
+    echo "" >&2
+    echo "COMMIT BLOCKED: undefined names found (see above)." >&2
+    exit 1
+  fi
+else
+  echo "WARNING: Rscript not found — skipping undefined-name check." >&2
+fi
+
 exit 0
