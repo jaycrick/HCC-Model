@@ -63,22 +63,7 @@ allowed <- list(
     "rate",
     "value"
   ),
-  bootstrap_estimates = "list_of_pars",
-  # tracked debt, finding C10 (R/simulation.R depends on undefined globals;
-  # fixed in the simulation step of the plan)
-  adh_sim = c("pr_na", "pr_pa"),
-  hccsim = "tmat",
-  us_sim = c(
-    "tmat",
-    paste0("Sym_", c("0", "A", "B", "C", "D")),
-    paste0("Sens_", c("0", "A", "B", "C", "D"))
-  ),
-  us_sim_pa = c(
-    "tmat",
-    "pr_att",
-    paste0("Sym_", c("0", "A", "B", "C", "D")),
-    paste0("Sens_", c("0", "A", "B", "C", "D"))
-  )
+  bootstrap_estimates = "list_of_pars"
 )
 
 # ----- Run codetools over the project functions -------------------------------

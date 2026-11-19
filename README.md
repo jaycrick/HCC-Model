@@ -67,7 +67,7 @@ This installs all packages at the exact versions recorded in `renv.lock`.
 │   ├── setup.R             # Libraries, seeds, constants, default parameters
 │   ├── model_core.R        # Markov transitions, US detection, adherence model
 │   ├── plotting.R          # Theme, save_figure(), sweeps, tornado and scenario plots
-│   ├── simulation.R        # Stochastic simulation functions (exploratory)
+│   ├── simulation.R        # Stochastic check of the cohort model
 │   └── bootstrap.R         # Bootstrap likelihood and scenario functions
 ├── analysis/               # Numbered analysis scripts (run in order)
 │   ├── 01_bootstrap_params.R   # Parameter estimation (HPC; skip with shipped data)

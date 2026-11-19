@@ -8,7 +8,7 @@ R/model_core.R,7
 R/plotting.R,0
 R/scenarios.R,0
 R/setup.R,1
-R/simulation.R,5
+R/simulation.R,1
 run_all.R,1
 tests/testthat.R,0
 tests/testthat/fixtures/make_golden.R,0
@@ -22,5 +22,6 @@ tests/testthat/test-likelihood.R,5
 tests/testthat/test-paper.R,0
 tests/testthat/test-plotting.R,0
 tests/testthat/test-scenarios.R,0
+tests/testthat/test-simulation.R,0
 tools/check_globals.R,0
 tools/lint_ratchet.R,0

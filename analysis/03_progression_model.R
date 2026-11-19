@@ -174,6 +174,6 @@ plot_stage_diagnoses(
     dpi = 300
   )
 
-# Note: stochastic simulation functions (hccsim, us_sim, adh_sim) are
-# available in R/simulation.R for exploratory use but are not used in the
-# published main analysis.
+# Note: stochastic simulation functions (simulate_cohort,
+# simulate_by_adherence) in R/simulation.R check the deterministic model and
+# are not used in the published main analysis.

@@ -1,153 +1,86 @@
 # R/simulation.R
-# Stochastic (Monte Carlo) simulation functions.
-# NOTE: These are exploratory functions not used in the published main analysis
-# (which uses the theoretical model in R/model_core.R).  They reference a
-# global `tmat` transition matrix that must be constructed by the caller; see
-# analysis/03_progression_model.R for context.
+# Stochastic (Monte Carlo) check of the deterministic cohort model.
+#
+# These functions replay, person by person (as binomial counts per state), the
+# monthly sequence of operations in screen_cohort() / screen_by_adherence()
+# (R/model_core.R): progress -> symptomatic detection -> ultrasound on
+# months with i %% m == 0. Their expectation therefore equals the
+# deterministic model's output, and tests/testthat/test-simulation.R checks
+# that. Not used in the published analysis (Cumming et al. 2024, Cancers
+# 16(15):2745), which uses the deterministic model.
+# Like model_core.R, nothing here uses globals or sets a seed.
 
-# ----- Basic stochastic progression ------------------------------------------
-
-#' Stochastically progress n people over m months (no screening).
+#' Stochastic analogue of screen_cohort().
 #'
-#' @param n  Cohort size.
-#' @param m  Number of months.
-#' @return Numeric vector of length 7: counts per stage.
-hccsim <- function(n, m) {
-  # n = number of people, m = number of months
-  vec <- c(n, rep(0, 6)) # initialise with all people in cirrhosis (F4)
-  for (i in 1:m) {
-    for (j in (length(vec) - 1):1) {
-      worse <- rbinom(1, vec[j], tmat[j, j + 1]) # people who progress
-      vec[j + 1] <- vec[j + 1] + worse
-      vec[j] <- vec[j] - worse
-    }
-  }
-  return(vec)
-}
+#' @inheritParams screen_cohort
+#' @return Numeric vector of length 7 (named by `stage_list`): people
+#'   diagnosed per stage.
+simulate_cohort <- function(
+  Pr_Att,
+  ...,
+  n = 1000,
+  t = 120,
+  m = 6,
+  params = params_def
+) {
+  params <- modify_params(params, list(...))
+  tmat <- transition_matrix(
+    annual_to_monthly(params$p_HCC),
+    unlist(params[STAGE_P_NAMES])
+  )
+  p_move <- tmat[cbind(1:6, 2:7)] # progression probability of states 1..6
+  sym_prob <- c(
+    0,
+    unlist(params[paste0("Sym_", c("0", "A", "B", "C", "D"))]),
+    1
+  )
+  us_prob <- c(
+    0,
+    unlist(params[paste0("Sens_", c("0", "A", "B", "C", "D"))]),
+    1
+  )
+  attend <- c(0, rep(Pr_Att, 5), 1)
 
-#' Compare two screening intervals using hccsim.
-simcomp <- function(n, l, s) hccsim(n, l) - hccsim(n, s)
-
-
-# ----- Stochastic progression with ultrasound screening ----------------------
-
-#' Stochastic model with 6-monthly (or m-monthly) ultrasound.
-#'
-#' References globals: tmat, Sym_0–Sym_D, Sens_0–Sens_D.
-#'
-#' @param n  Cohort size.
-#' @param t  Total follow-up months.
-#' @param m  Ultrasound interval months.
-#' @return Numeric vector of length 7.
-us_sim <- function(n, t, m) {
-  vec <- c(n, rep(0, 6))
-  fin <- rep(0, 7)
+  vec <- c(n, rep(0, 6)) # undiagnosed people per state
+  dx <- rep(0, 7)
   for (i in 1:t) {
-    for (j in (length(vec) - 1):1) {
-      worse <- rbinom(1, vec[j], tmat[j, j + 1])
-      vec[j + 1] <- vec[j + 1] + worse
-      vec[j] <- vec[j] - worse
-    }
-    sym <- c(
-      0,
-      rbinom(1, vec[2], Sym_0),
-      rbinom(1, vec[3], Sym_A),
-      rbinom(1, vec[4], Sym_B),
-      rbinom(1, vec[5], Sym_C),
-      rbinom(1, vec[6], Sym_D),
-      vec[7]
-    )
-    fin <- fin + sym
+    move <- rbinom(6, vec[1:6], p_move) # all draws use start-of-month counts
+    vec <- vec - c(move, 0) + c(0, move)
+    sym <- rbinom(7, vec, sym_prob)
+    dx <- dx + sym
     vec <- vec - sym
     if (i %% m == 0) {
-      us <- c(
-        0,
-        rbinom(1, vec[2], Sens_0),
-        rbinom(1, vec[3], Sens_A),
-        rbinom(1, vec[4], Sens_B),
-        rbinom(1, vec[5], Sens_C),
-        rbinom(1, vec[6], Sens_D),
-        vec[7]
-      ) # how many are picked up at the ultrasound
-      fin <- fin + us
+      go <- rbinom(7, vec, attend)
+      us <- rbinom(7, go, us_prob)
+      dx <- dx + us
       vec <- vec - us
     }
   }
-  return(fin)
+  setNames(dx, stage_list)
 }
 
-
-# ----- Stochastic model for the partially-adherent group ---------------------
-
-#' Stochastic model for the partial-adherence cohort (pr_att attendance rate).
+#' Stochastic analogue of screen_by_adherence().
 #'
-#' References globals: tmat, pr_att, Sym_0–Sym_D, Sens_0–Sens_D.
+#' People are split into non-, partially and completely adherent groups
+#' (multinomial draw), each group is simulated with `simulate_cohort()`
+#' (attendance 0, `p_Att`, 1) and the diagnoses are summed.
 #'
-#' @param n  Cohort size.
-#' @param t  Total follow-up months.
-#' @param m  Ultrasound interval months.
-#' @return Numeric vector of length 7.
-us_sim_pa <- function(n, t, m) {
-  vec <- c(n, rep(0, 6))
-  fin <- rep(0, 7)
-  for (i in 1:t) {
-    for (j in (length(vec) - 1):1) {
-      worse <- rbinom(1, vec[j], tmat[j, j + 1])
-      vec[j + 1] <- vec[j + 1] + worse
-      vec[j] <- vec[j] - worse
-      if (i %% m == 0) {
-        sym <- c(
-          0,
-          rbinom(1, vec[2], Sym_0),
-          rbinom(1, vec[3], Sym_A),
-          rbinom(1, vec[4], Sym_B),
-          rbinom(1, vec[5], Sym_C),
-          rbinom(1, vec[6], Sym_D),
-          vec[7]
-        )
-        fin <- fin + sym
-        vec <- vec - sym
-        go <- c(
-          0,
-          rbinom(1, vec[2], pr_att),
-          rbinom(1, vec[3], pr_att),
-          rbinom(1, vec[4], pr_att),
-          rbinom(1, vec[5], pr_att),
-          rbinom(1, vec[6], pr_att),
-          vec[7]
-        ) # how many actually go to the ultrasound
-        us <- c(
-          0,
-          rbinom(1, go[2], Sens_0),
-          rbinom(1, go[3], Sens_A),
-          rbinom(1, go[4], Sens_B),
-          rbinom(1, go[5], Sens_C),
-          rbinom(1, go[6], Sens_D),
-          vec[7]
-        )
-        fin <- fin + us
-        vec <- vec - us
-      }
-    }
-  }
-  return(fin)
-}
-
-
-# ----- Adherence-stratified stochastic model ---------------------------------
-
-#' Stochastic adherence-stratified model.
-#'
-#' References globals: pr_na, pr_pa (adherence proportions) plus those used
-#' by us_sim and us_sim_pa.
-#'
-#' @param n  Cohort size.
-#' @param t  Total follow-up months.
-#' @param m  Ultrasound interval months.
-#' @return Numeric vector of length 7.
-adh_sim <- function(n, t, m) {
-  adh_group <- rmultinom(1, n, c(pr_na, pr_pa, 1 - pr_na - pr_pa))
-  stage_caught <- us_sim(adh_group[3], t, m) + us_sim_pa(adh_group[2], t, m)
-  stage_caught[7] <- stage_caught[7] + adh_group[1]
-  return(stage_caught)
+#' @inheritParams screen_by_adherence
+#' @return Numeric vector of length 7: people diagnosed per stage.
+simulate_by_adherence <- function(
+  ...,
+  n = 1000,
+  t = 120,
+  m = 6,
+  params = params_def
+) {
+  params <- modify_params(params, list(...))
+  prob <- c(params$p_NA, 1 - params$p_NA - params$p_CA, params$p_CA)
+  n_group <- as.vector(rmultinom(1, n, prob))
+  att <- c(0, params$p_Att, 1)
+  rowSums(mapply(
+    function(ng, a) simulate_cohort(a, n = ng, t = t, m = m, params = params),
+    n_group,
+    att
+  ))
 }
