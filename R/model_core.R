@@ -10,6 +10,8 @@
 # Cumming et al. 2024, Cancers 16:2745, Sec. 2.1 and Fig. 1.
 # p_HCC is an ANNUAL probability; p_0..p_D, Sens_*, Sym_* are MONTHLY or
 # per-event probabilities (paper Tables 1-3).
+# Notation follows the paper (Tables 2-3, Fig. 1): p_*, Sens_*, Sym_*, L_*,
+# p_NA, p_CA, p_Att. Short local names (vec, Dx, sym, us) have no paper symbol.
 
 # ----- Constants --------------------------------------------------------------
 
@@ -28,6 +30,8 @@ STAGE_P_NAMES <- c("p_0", "p_A", "p_B", "p_C", "p_D")
 #'
 #' This is what stops a typo such as `p_att` from silently returning the
 #' baseline (finding C2).
+#'
+#' Ref: none (code safeguard, not part of the publication's model).
 #'
 #' @param params     Named list of parameters (e.g. `params_def`).
 #' @param overrides  Named list of replacement values.
@@ -53,11 +57,13 @@ modify_params <- function(params, overrides) {
 #' Convert an annual probability to the equivalent monthly probability.
 #'
 #' Assumes a constant hazard: p_month = 1 - (1 - p_annual)^(1/12).
-#' Fleurence & Hollenbeak 2007, PharmacoEconomics 25(1):3-6.
+#' Ref: Fleurence & Hollenbeak 2007, PharmacoEconomics 25(1):3-6; applied to
+#' p_HCC, the only annual probability (Cumming 2024, Table 2).
 #'
 #' @param p  Annual probability (scalar or vector).
 #' @return Monthly probability, same shape as `p`.
 annual_to_monthly <- function(p) {
+  # Ref: Fleurence & Hollenbeak 2007 (rate-to-probability conversion)
   1 - (1 - p)^(1 / 12)
 }
 
@@ -65,7 +71,10 @@ annual_to_monthly <- function(p) {
 #'
 #' Cirrhosis -> BCLC 0 with probability `p_HCC_month`; each BCLC stage
 #' progresses to the next with its own probability; BCLC D -> Mortality;
-#' Mortality is absorbing. Cumming et al. 2024 Cancers 16:2745, Sec. 2.1, Fig. 1.
+#' Mortality is absorbing.
+#'
+#' Ref: Cumming 2024, Sec. 2.1 and Fig. 1 (base model of undiagnosed HCC;
+#' arrows p_HCC, p_0, p_A, p_B, p_C, p_D).
 #'
 #' @param p_HCC_month  Monthly probability of developing HCC from cirrhosis.
 #' @param p_stage      Monthly progression probabilities (p_0, p_A, p_B, p_C,
@@ -73,17 +82,22 @@ annual_to_monthly <- function(p) {
 #' @return 7x7 row-stochastic matrix with dimnames `stage_list`.
 transition_matrix <- function(p_HCC_month, p_stage) {
   stopifnot(length(p_stage) == 5)
+  # Ref: Cumming 2024, Fig. 1 (arrow probabilities out of each state)
   p <- c(p_HCC_month, unname(p_stage)) # progression out of states 1..6
   tm <- matrix(0, 7, 7, dimnames = list(stage_list, stage_list))
+  # Ref: Cumming 2024, Fig. 1 (stay with probability 1 - p)
   tm[cbind(1:6, 1:6)] <- 1 - p # stay in state
+  # Ref: Cumming 2024, Fig. 1 (move to the next state with probability p)
   tm[cbind(1:6, 2:7)] <- p # move to the next state
-  tm[7, 7] <- 1 # Mortality absorbing
+  tm[7, 7] <- 1 # Mortality absorbing; Ref: Cumming 2024, Fig. 1 (Death)
   tm
 }
 
 # ----- Base progression model -------------------------------------------------
 
 #' Markov progression of an untreated cohort.
+#'
+#' Ref: Cumming 2024, Sec. 2.1 and Fig. 1 (base model of undiagnosed HCC).
 #'
 #' @param ...     Parameter overrides by name (e.g. `p_HCC = 0.03`); unknown
 #'                names are an error.
@@ -94,10 +108,12 @@ transition_matrix <- function(p_HCC_month, p_stage) {
 progress_untreated <- function(..., n = 100, t = 120, params = params_def) {
   params <- modify_params(params, list(...))
   tmat <- transition_matrix(
-    annual_to_monthly(params$p_HCC), # p_HCC is annual
-    unlist(params[STAGE_P_NAMES]) # p_0..p_D are already monthly (paper Table 1)
+    annual_to_monthly(params$p_HCC), # p_HCC is annual (Table 2)
+    unlist(params[STAGE_P_NAMES]) # p_0..p_D are already monthly (Table 1)
   )
-  stage <- c(n, rep(0, 6)) %*% (tmat %^% t) # Chapman-Kolmogorov, t steps
+  # Ref: Cumming 2024, Sec. 2.1 (monthly steps; all start in Cirrhosis).
+  # Chapman-Kolmogorov: t monthly steps.
+  stage <- c(n, rep(0, 6)) %*% (tmat %^% t)
   as_tibble(stage, .name_repair = ~stage_list)
 }
 
@@ -109,7 +125,11 @@ progress_untreated <- function(..., n = 100, t = 120, params = params_def) {
 #' Each month the cohort moves one step through the transition matrix, then
 #' symptomatic detection removes `Sym_*` of each state, and every `m` months
 #' attending people are screened with sensitivity `Sens_*`.
-#' (Cumming et al. 2024 Cancers 16:2745, Sec. 2.1-2.2.)
+#'
+#' Ref: Cumming 2024, Fig. 1 (treatment layer: symptoms or incidental
+#' diagnosis with probability Sym_X, else 6-monthly ultrasound that is
+#' attended with probability p_Att and detects with probability Sens_X) and
+#' Sec. 2.1 (p. 4, scheduled surveillance).
 #'
 #' @param Pr_Att  Probability of attending a scheduled ultrasound (0 = none,
 #'                1 = complete adherence).
@@ -132,29 +152,37 @@ screen_cohort <- function(
 ) {
   params <- modify_params(params, list(...))
   tmat <- transition_matrix(
-    annual_to_monthly(params$p_HCC), # p_HCC is annual
+    annual_to_monthly(params$p_HCC), # p_HCC is annual (Table 2)
     unlist(params[STAGE_P_NAMES])
   )
   vec <- c(n, rep(0, 6)) # undiagnosed people per state
   Dx <- rep(0, 7) # diagnosed people
+  # Ref: Cumming 2024, Fig. 1 and Tables 2-3 (Sym_X; Cirrhosis 0, Death 1)
   sym_prob <- c(
     0,
     unlist(params[paste0("Sym_", c("0", "A", "B", "C", "D"))]),
     1
   )
+  # Ref: Cumming 2024, Fig. 1 and Tables 2-3 (Sens_X)
   US_probs <- c(
     0,
     unlist(params[paste0("Sens_", c("0", "A", "B", "C", "D"))]),
     1
   )
+  # Ref: Cumming 2024, Fig. 1 (attend ultrasound: p_NA, p_CA, p_Att)
   attend <- c(0, rep(Pr_Att, 5), 1) # who goes to the ultrasound
   for (i in 1:t) {
+    # Ref: Cumming 2024, Fig. 1 ("1 month", progress to next BCLC stage)
     vec <- vec %*% tmat
+    # Ref: Cumming 2024, Fig. 1 (symptoms or incidental diagnosis, Sym_X)
     sym <- vec * sym_prob # detected through symptoms
     Dx <- Dx + sym
     vec <- vec - sym
+    # Ref: Cumming 2024, Fig. 1 (6 months since last scheduled ultrasound?)
     if (i %% m == 0) {
+      # Ref: Cumming 2024, Fig. 1 (attend ultrasound?)
       go <- vec * attend # how many actually go to the ultrasound
+      # Ref: Cumming 2024, Fig. 1 (HCC detected? Sens_X)
       us <- go * US_probs # detected by ultrasound
       Dx <- Dx + us
       vec <- vec - us
@@ -170,6 +198,10 @@ screen_cohort <- function(
 # ----- Adherence-stratified detection model -----------------------------------
 
 #' Combine detection across three adherence groups (non-, partial, complete).
+#'
+#' Ref: Cumming 2024, Sec. 2.1 (p. 4: completely adherent, partially adherent
+#' and non-adherent cohorts), Table 3 (p_NA, p_CA, p_Att); Supplement
+#' Sec. 3.1 (Pr(partially adherent) = 1 - Pr(non-) - Pr(completely adherent)).
 #'
 #' @param ...     Parameter overrides by name (e.g. `p_NA`, `p_CA`, `p_Att`,
 #'                `Sens_0`); unknown names are an error.
@@ -187,6 +219,7 @@ screen_by_adherence <- function(
 ) {
   params <- modify_params(params, list(...))
   # people in each adherence group: non-, partially, completely adherent
+  # Ref: Supplement Sec. 3.1 (p. 11, partially adherent = 1 - p_NA - p_CA)
   adh_group <- n * c(params$p_NA, 1 - params$p_NA - params$p_CA, params$p_CA)
 
   caught <- function(n_group, Pr_Att) {
@@ -194,6 +227,7 @@ screen_by_adherence <- function(
     as_tibble(as.list(dx))
   }
 
+  # Ref: Cumming 2024, Sec. 2.1 (attendance 0, p_Att and 1 per cohort)
   map2_dfr(adh_group, c(0, params$p_Att, 1), caught) %>%
     summarise_all(sum)
 }
@@ -206,6 +240,9 @@ screen_by_adherence <- function(
 #' Sums the product of stage-specific diagnoses and stage-specific life-year
 #' gains (L_*) across all adherence groups.
 #'
+#' Ref: Cumming 2024, Sec. 2.1 (p. 5: diagnoses per stage multiplied by the
+#' additional life expectancy L_X) and Table 2 (L_0 .. L_D).
+#'
 #' @param ...     Parameter overrides by name (any of `names(params_def)`);
 #'                unknown names are an error.
 #' @param n       Cohort size.
@@ -217,6 +254,7 @@ life_add <- function(..., n = 100, t = 120, m = 6, params = params_def) {
   params <- modify_params(params, list(...))
   stage_caught <- screen_by_adherence(n = n, t = t, m = m, params = params)
   L <- unname(unlist(params[paste0("L_", c("0", "A", "B", "C", "D"))]))
+  # Ref: Cumming 2024, Sec. 2.1 (p. 5), Table 2 (L_X)
   sum(stage_caught * c(0, L, 0)) # life-years: sum_stage Dx_stage * L_stage
 }
 
@@ -224,6 +262,8 @@ life_add <- function(..., n = 100, t = 120, m = 6, params = params_def) {
 # ----- Sensitivity-analysis helpers -------------------------------------------
 
 #' Build a one-row tibble of named parameter values for use with pmap.
+#'
+#' Ref: none (helper for the univariate sensitivity analysis, Sec. 2.3).
 #'
 #' @param Parameter  Parameter name (length 1).
 #' @param value      Its value.
@@ -234,6 +274,8 @@ dfs <- function(Parameter, value, ...) {
 }
 
 #' Keep only the model-parameter columns of a draws tibble.
+#'
+#' Ref: none (code safeguard).
 #'
 #' Bootstrap tibbles carry scenario/result columns next to the parameter
 #' columns; life_add() rejects unknown names (finding C2), so every
@@ -246,6 +288,8 @@ draws <- function(df) select(df, any_of(names(params_def)))
 #' Parameter draws ready for the model: the parameter columns of `df` with
 #' `Sym_B = SYM_B_RATIO * Sym_A` set from each draw's Sym_A.
 #'
+#' Ref: Supplement Sec. 2.1.3, footnote 4 (8 x Sym_A = Sym_B).
+#'
 #' Sym_B is not estimated (Supplement Sec. 2.1.3, footnote 4), so every
 #' bootstrap analysis, the scenarios and every sweep, must derive it from the
 #' draw's Sym_A rather than keep the default Sym_B. This is the one place that
@@ -256,19 +300,33 @@ draws <- function(df) select(df, any_of(names(params_def)))
 prepare_draws <- function(df) {
   out <- draws(df)
   sym_a <- if ("Sym_A" %in% names(out)) out$Sym_A else params_def$Sym_A
-  out$Sym_B <- SYM_B_RATIO * sym_a
+  out$Sym_B <- SYM_B_RATIO * sym_a # Ref: Supplement Sec. 2.1.3, footnote 4
   out
 }
 
 #' Apply life_add across each row of a data-frame of parameter draws.
+#'
+#' Ref: none (applies `life_add()`, Sec. 2.1, to each bootstrap draw).
+#'
+#' @param df  Tibble of parameter draws (columns named as `params_def`).
+#' @return Numeric vector of life-years, one per row.
 years <- function(df) pmap_dbl(df, life_add)
 
 #' Sum of absolute values.
+#'
+#' Ref: none (summary for the sensitivity plots, Fig. 2D).
+#'
+#' @param x  Numeric vector.
+#' @return Scalar sum of `abs(x)`.
 abssum <- function(x) sum(abs(x))
 
 #' Build the parameter tibble used for univariate sensitivity tornado plots.
 #'
-#' @param csv  Full path to a Parameters CSV (e.g. here("data","Parameters.csv")).
+#' Ref: Cumming 2024, Sec. 2.3 and Fig. 2D (one-at-a-time variation of the
+#' modifiable parameters; +/-25% bounds when `csv` is Parameters_25.csv) and
+#' Sec. 2.5 (low and high p_HCC).
+#'
+#' @param csv  Full path to a Parameters CSV, e.g. data/Parameters.csv.
 #' @return Tibble with one row per parameter × bound combination plus computed
 #'   life-year columns.
 life_tibble <- function(csv) {
@@ -296,6 +354,8 @@ life_tibble <- function(csv) {
       years_mid = map_dbl(dfs_new, years),
       years_low = map_dbl(dfs_low, years),
       years_high = map_dbl(dfs_high, years),
+      # Ref: Cumming 2024, Sec. 2.3 (change in life years vs the point
+      # estimate), Sec. 2.5 (p_HCC low / high)
       years_mid_comp = years_mid - life_add(),
       years_low_comp = years_low - life_add(p_HCC = lower$p_HCC),
       years_high_comp = years_high - life_add(p_HCC = upper$p_HCC)

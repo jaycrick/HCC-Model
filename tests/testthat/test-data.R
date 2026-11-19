@@ -87,3 +87,21 @@ test_that("Parameters_25 POINT == Parameters POINT", {
     label = "POINT column: Parameters_25.csv == Parameters.csv"
   )
 })
+
+test_that("Parameters_sources.csv has the same PARAMETERs in order", {
+  src <- read.csv(here::here("data", "Parameters_sources.csv"))
+  expect_identical(
+    names(src),
+    c("PARAMETER", "SOURCE", "TABLE_REF"),
+    label = "column names of data/Parameters_sources.csv"
+  )
+  expect_identical(
+    src$PARAMETER,
+    rownames(main),
+    label = "PARAMETER column of data/Parameters_sources.csv vs Parameters.csv"
+  )
+  expect_false(
+    any(!nzchar(src$SOURCE) | !nzchar(src$TABLE_REF)),
+    label = "no empty SOURCE or TABLE_REF cell in Parameters_sources.csv"
+  )
+})

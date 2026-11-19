@@ -68,7 +68,8 @@ This installs all packages at the exact versions recorded in `renv.lock`.
 │   ├── model_core.R        # Markov transitions, US detection, adherence model
 │   ├── plotting.R          # Theme, save_figure(), sweeps, tornado and scenario plots
 │   ├── simulation.R        # Stochastic check of the cohort model
-│   └── bootstrap.R         # Bootstrap likelihood and scenario functions
+│   ├── scenarios.R         # Scenario definitions as data; run_scenarios()
+│   └── bootstrap.R         # Calibration data, likelihood, bootstrap inputs
 ├── analysis/               # Numbered analysis scripts (run in order)
 │   ├── 01_bootstrap_params.R   # Parameter estimation (HPC; skip with shipped data)
 │   ├── 02_sensitivity.R        # Univariate sensitivity analysis
@@ -76,6 +77,7 @@ This installs all packages at the exact versions recorded in `renv.lock`.
 │   └── 04_clinical_scenarios.R # Clinical scenario comparisons
 ├── data/                   # Read-only parameter inputs
 │   ├── Parameters.csv          # Point estimates and uncertainty bounds
+│   ├── Parameters_sources.csv  # Source and table reference per parameter
 │   └── Parameters_25.csv       # ±25% variation bounds
 ├── data-derived/           # Pre-computed bootstrap outputs (Git LFS)
 │   ├── miltonoutput.rds             # Raw MLE outputs from HPC cluster
@@ -83,6 +85,9 @@ This installs all packages at the exact versions recorded in `renv.lock`.
 │   ├── resampled_pars.rds           # Bootstrapped transition parameters (n = 10 000)
 │   ├── resampled_pars_fin.rds       # As above + scenario life-year columns
 │   └── param_names.rds             # Named list of reported manuscript values
+├── output/                 # manuscript_values.csv: every number quoted in the paper
+├── tests/testthat/         # Test suite (see Tests)
+├── tools/                  # lint_ratchet.R, check_globals.R
 └── figures/                # Generated figures (git-ignored; reproduced by pipeline)
 ```
 
@@ -121,6 +126,7 @@ To explore or modify the model outside the pipeline, source the two core files a
 ```r
 source("R/setup.R")      # loads packages; reads Parameters.csv into `params_def`
 source("R/model_core.R") # defines progress_untreated(), screen_cohort(), screen_by_adherence(), life_add()
+# (R/bootstrap.R and R/scenarios.R are sourced the same way when needed)
 
 # Life-years gained under default parameters (current practice)
 life_add()
@@ -145,17 +151,35 @@ ordinary named arguments. To run on a different parameter set, pass
 
 Key functions:
 
-| Function | Purpose |
-|----------|---------|
-| `load_params(csv, column)` | Read a Parameters CSV into a named list (by `PARAMETER` name) |
-| `modify_params(params, overrides)` | Override named parameters; errors on unknown names |
-| `annual_to_monthly(p)` | Convert an annual probability to monthly |
-| `transition_matrix(p_HCC_month, p_stage)` | The 7x7 monthly transition matrix |
-| `progress_untreated(..., n, t, params)` | Markov progression of an untreated cohort over `t` months |
-| `screen_cohort(Pr_Att, ..., n, t, m, params)` | Ultrasound detection for one adherence group; returns `list(dx, undiagnosed)` |
-| `screen_by_adherence(..., n, t, m, params)` | Detection across all three adherence groups |
-| `life_add(..., n, t, m, params)` | Total life-years gained; wraps `screen_by_adherence` |
-| `life_tibble(csv)` | Builds parameter sweep tibble for sensitivity tornado plots |
+Every function has a roxygen-style header (purpose, `@param`, `@return`) with
+a `Ref:` line that points to the section, equation, table or figure of Cumming
+et al. 2024 or its Supplement (`Ref: none` where the code has no counterpart in
+the publication). Variables follow the paper's notation (`p_HCC`, `p_0`..`p_D`,
+`Sens_*`, `Sym_*`, `L_*`, `p_NA`, `p_CA`, `p_Att`).
+
+| Function | File | Purpose |
+|----------|------|---------|
+| `load_params(csv, column)` | setup.R | Read a Parameters CSV into a named list (by `PARAMETER` name) |
+| `modify_params(params, overrides)` | model_core.R | Override named parameters; errors on unknown names |
+| `annual_to_monthly(p)` | model_core.R | Convert an annual probability to monthly |
+| `transition_matrix(p_HCC_month, p_stage)` | model_core.R | The 7x7 monthly transition matrix |
+| `progress_untreated(..., n, t, params)` | model_core.R | Markov progression of an untreated cohort over `t` months |
+| `screen_cohort(Pr_Att, ..., n, t, m, params)` | model_core.R | Ultrasound detection for one adherence group; returns `list(dx, undiagnosed)` |
+| `screen_by_adherence(..., n, t, m, params)` | model_core.R | Detection across all three adherence groups |
+| `life_add(..., n, t, m, params)` | model_core.R | Total life-years gained; wraps `screen_by_adherence` |
+| `life_tibble(csv)` | model_core.R | Parameter sweep tibble for the sensitivity tornado plots |
+| `prepare_draws(df)`, `draws(df)`, `years(df)` | model_core.R | Bootstrap draws ready for the model (`Sym_B = 8 * Sym_A`); life-years per draw |
+| `scenario_defs`, `risk_multipliers`, `run_scenarios(param_rows)` | scenarios.R | Scenarios as data; life-years per scenario x risk level x draw |
+| `scenario_columns(long)` | scenarios.R | Pivot `run_scenarios()` output to the legacy wide columns |
+| `record_values(values, path)` | setup.R | Merge named values into `output/manuscript_values.csv` |
+| `calibration_data` | bootstrap.R | Observed calibration data (Supp. Sec. 2.1.1) |
+| `likelihood_matrix(p_0, p_A, sens_0, sens_A)` | bootstrap.R | The 15x15 transition matrix of Supp. Table S2 / matrix S1 |
+| `end_state_probs(tm, sens_0, t)` | bootstrap.R | Probability of ending in each state after `t` months |
+| `neg_log_lik(par, ...)` | bootstrap.R | Negative log-likelihood of the 8 calibrated parameters |
+| `fit_point_estimate(start)` | bootstrap.R | Nelder-Mead maximum-likelihood point estimate |
+| `bootstrap_inputs_long()`, `bootstrap_estimates()` | bootstrap.R | Read the shipped bootstrap inputs and MLEs |
+| `simulate_cohort(Pr_Att, ...)`, `simulate_by_adherence(...)` | simulation.R | Stochastic (binomial) check of the cohort model; not in the publication |
+| `theme_hcc()`, `save_figure()`, `sweep_*()`, `plot_*()` | plotting.R | Figure helpers: data builders, plot functions and saving |
 
 ---
 
@@ -163,7 +187,8 @@ Key functions:
 
 | File | Source | Description |
 |------|--------|-------------|
-| `Parameters.csv` | Literature / expert elicitation | Point estimates and 95% bounds for all model parameters |
+| `Parameters.csv` | Cumming 2024, Tables 1-3 | Point estimates and 95% bounds for all model parameters (point estimate = published MLE) |
+| `Parameters_sources.csv` | Cumming 2024, Tables 2-3 | `PARAMETER`, `SOURCE`, `TABLE_REF` for each row of `Parameters.csv`; unknowns are marked `TODO: confirm with author` |
 | `Parameters_25.csv` | Derived from Parameters.csv | ±25% variation bounds for modifiable parameters |
 | `miltonoutput.rds` | HPC cluster MLE run | 10 000 MLE optimisation results from bootstrapped input data |
 | `list_of_resampled_milton_output.rds` | Parametric bootstrap | Bootstrapped summary statistics used as MLE inputs |
@@ -206,7 +231,11 @@ curl -fsSL https://github.com/posit-dev/air/releases/latest/download/air-install
 
 Format any file manually with `air format <file.R>`, or format the whole project with `air format .`.
 
-### Lint ratchet
+### Lint and format
+
+Formatting is owned by [air](https://github.com/posit-dev/air) (`air.toml`, line width 80): `air format .` formats, `air format --check .` checks.
+Enable the versioned hooks once per clone with `git config core.hooksPath .githooks`.
+`tools/check_globals.R` uses codetools to find any project function that uses an undefined name (a typo or a missing global); the hook and CI both run it.
 
 Lint rules live in `.lintr` (line length 80 to match `air.toml`; `object_usage_linter` is off because it cannot see across the sourced `R/` files, and `tools/check_globals.R` does that job; `object_name_linter` and `indentation_linter` are disabled because the code follows paper notation such as `p_HCC` and air owns formatting).
 The legacy code still has many lints, so instead of a hard zero-lint gate the repository uses a ratchet: `tools/lint_baseline.csv` records each file's allowed lint count, and a file may never exceed it.
@@ -215,6 +244,7 @@ A file not in the baseline must have zero lints.
 ```bash
 Rscript tools/lint_ratchet.R [files...]   # check (default: all project .R files)
 Rscript tools/lint_ratchet.R --update     # lower the baseline after fixing lints
+Rscript tools/check_globals.R             # undefined names
 ```
 
 `--update` refuses to raise any count, so the baseline can only go down.
@@ -228,11 +258,41 @@ Rscript -e 'testthat::test_dir("tests/testthat")'
 
 The suite takes a few seconds.
 Never run `run_all.R` as a test; it takes about 30 minutes.
+The tests fall into four groups:
+
+- **Golden** (`test-golden.R`, `tests/testthat/fixtures/golden.rds`): pins the code as it is, bugs included. The fixture is generated once by `fixtures/make_golden.R` and regenerated only under an approved, recorded change (see `CHANGES.md`). Doubles are compared at relative tolerance **1e-12**: portable across platforms (libm/BLAS noise is about 1e-15), while real model changes are at least 1e-3.
+- **Invariants** (`test-invariants.R`, `test-core.R`, `test-simulation.R`, `test-likelihood.R`): properties that must hold whatever the numbers are, e.g. rows of the transition matrix sum to 1, people are conserved (`sum(dx) + sum(undiagnosed) == n`), the stochastic model agrees with the deterministic one in expectation, and the likelihood matches its closed form.
+- **Paper anchors** (`test-paper.R`, `test-scenarios.R`): published values (abstract, Sec. 3, Table 3) after rounding to the printed precision.
+- **Data and ledger** (`test-data.R`, `test-ledger.R`, `test-plotting.R`): CSV structure (including that `Parameters_sources.csv` lists the same parameters in the same order), ledger format, plot helpers.
 
 ### Continuous integration
 
 `.github/workflows/check.yml` runs on every push and pull request (Ubuntu, R version and packages from `renv.lock`).
-It runs `air format --check .`, the lint ratchet, `tools/check_globals.R` and the test suite.
+It runs `air format --check .` (air pinned to the version in the workflow), the lint ratchet, `tools/check_globals.R` and the test suite.
+
+---
+
+## Outputs
+
+- `output/manuscript_values.csv` (columns `name`, `value`) is the ledger of every number quoted in the manuscript, written by `record_values()`. It is sorted by name and written at a precision that round-trips exactly, so it is text-diffable.
+- `data-derived/` is read-only input (the shipped bootstrap data). Nothing writes to it except the deliberate `Rscript run_all.R --bootstrap` regeneration.
+- `figures/` is generated by the pipeline and git-ignored.
+
+---
+
+## Known errata in the publication
+
+Where the publication and the code disagree, the code was kept so that the published numbers reproduce. Each item is also a comment at the relevant line of code.
+
+| ID | Where | What |
+|----|-------|------|
+| P1 | Supplement p. 6 | The printed Pr(d_alpha) omits the (1 - Sym) factors; the code uses the correct form (0.3289 at the MLE against 52/158 = 0.329 observed). |
+| P2 | Paper Sec. 2.5 | The text gives low / high annual HCC risks of 1.1% / 2.2% (2.2% is also the baseline); the code, and Supplement Sec. 5 ("half and double"), use x0.5 and x2 of p_HCC (1.1% and 4.4%). The Supplement Figs. S6-S7 captions say 1% and 4%. |
+| P3 | Paper Sec. 2.2.2 | "52 of n = 156"; the Supplement (s-bar = 158) and the code use 158. |
+| P4 | Supplement Fig. S3 caption | Says N(mu = 68.0); 68.0 is the point estimate `life_add()`. The fitted normal in the code uses the bootstrap mean (about 67.6). |
+| P5 | Supplement Table S2 | Lists 14 states; the code adds a 15th absorbing state `past_A` (progressed past BCLC A undiagnosed). Also, Pr(d_0) uses the t^(100) approximation (error about 1.5e-6) rather than the exact closed form, because it generated the published MLE. |
+| P6 | Paper Sec. 2.4, scenario 3 | The text lists L_A +1 year and L_B +6 months only; the code, and the published 9.0 life-years, also add L_C + 0.5. |
+| P7 | Table 3 / `Parameters.csv` | The published MLE is Nelder-Mead's stopping point at its default tolerance, not an exact optimum (NLL 2e-4 above a tight BFGS optimum); negligible next to the bootstrap intervals. See `CHANGES.md`. |
 
 ---
 

@@ -9,8 +9,12 @@
 # that. Not used in the published analysis (Cumming et al. 2024, Cancers
 # 16(15):2745), which uses the deterministic model.
 # Like model_core.R, nothing here uses globals or sets a seed.
+# Ref: not in the publication; mirrors Cumming 2024, Sec. 2.1 and Fig. 1.
 
 #' Stochastic analogue of screen_cohort().
+#'
+#' Ref: Cumming 2024, Fig. 1 (same monthly sequence as `screen_cohort()`;
+#' binomial draws instead of expected counts).
 #'
 #' @inheritParams screen_cohort
 #' @return Numeric vector of length 7 (named by `stage_list`): people
@@ -28,6 +32,7 @@ simulate_cohort <- function(
     annual_to_monthly(params$p_HCC),
     unlist(params[STAGE_P_NAMES])
   )
+  # Ref: Cumming 2024, Fig. 1 (arrow probabilities p_HCC, p_0 .. p_D)
   p_move <- tmat[cbind(1:6, 2:7)] # progression probability of states 1..6
   sym_prob <- c(
     0,
@@ -39,17 +44,21 @@ simulate_cohort <- function(
     unlist(params[paste0("Sens_", c("0", "A", "B", "C", "D"))]),
     1
   )
+  # Ref: Cumming 2024, Fig. 1 (attend ultrasound?)
   attend <- c(0, rep(Pr_Att, 5), 1)
 
   vec <- c(n, rep(0, 6)) # undiagnosed people per state
   dx <- rep(0, 7)
   for (i in 1:t) {
+    # Ref: Cumming 2024, Fig. 1 (progress to next BCLC stage)
     move <- rbinom(6, vec[1:6], p_move) # all draws use start-of-month counts
     vec <- vec - c(move, 0) + c(0, move)
+    # Ref: Cumming 2024, Fig. 1 (symptoms or incidental diagnosis, Sym_X)
     sym <- rbinom(7, vec, sym_prob)
     dx <- dx + sym
     vec <- vec - sym
     if (i %% m == 0) {
+      # Ref: Cumming 2024, Fig. 1 (attend ultrasound, then Sens_X)
       go <- rbinom(7, vec, attend)
       us <- rbinom(7, go, us_prob)
       dx <- dx + us
@@ -60,6 +69,8 @@ simulate_cohort <- function(
 }
 
 #' Stochastic analogue of screen_by_adherence().
+#'
+#' Ref: Cumming 2024, Sec. 2.1 (p. 4, three adherence cohorts) and Table 3.
 #'
 #' People are split into non-, partially and completely adherent groups
 #' (multinomial draw), each group is simulated with `simulate_cohort()`
@@ -75,8 +86,10 @@ simulate_by_adherence <- function(
   params = params_def
 ) {
   params <- modify_params(params, list(...))
+  # Ref: Supplement Sec. 3.1 (p. 11, partially adherent = 1 - p_NA - p_CA)
   prob <- c(params$p_NA, 1 - params$p_NA - params$p_CA, params$p_CA)
   n_group <- as.vector(rmultinom(1, n, prob))
+  # Ref: Cumming 2024, Sec. 2.1 (attendance 0, p_Att, 1 per cohort)
   att <- c(0, params$p_Att, 1)
   rowSums(mapply(
     function(ng, a) simulate_cohort(a, n = ng, t = t, m = m, params = params),

@@ -2,6 +2,8 @@
 # Shared initialisation: loaded at the top of every analysis script.
 # Defines libraries, conflict preferences, global constants, default
 # parameters, and shared visual objects.
+# Parameter values: Cumming 2024, Tables 2-3; their sources are listed in
+# the file Parameters_sources.csv (in data/).
 
 # ----- Libraries --------------------------------------------------------------
 library(conflicted) # must load first to intercept ambiguous calls
@@ -39,6 +41,9 @@ stage_list <- c(
 #'
 #' Values are matched by the PARAMETER column, never by position, and the
 #' UTF-8 byte-order mark in the CSV header is handled.
+#'
+#' Ref: Cumming 2024, Tables 2 and 3 (values); sources per parameter in
+#' data/Parameters_sources.csv.
 #'
 #' @param csv     Path to a Parameters CSV (columns PARAMETER, POINT, LOWER,
 #'                UPPER).
@@ -92,6 +97,8 @@ my_line <- scale_linetype_manual(
 # ----- Shared axis / legend labels --------------------------------------------
 
 #' Build one LaTeX label expression, e.g. \\textit{p}_{CA}.
+#'
+#' Ref: none (plot labels in paper notation, Tables 2-3).
 #'
 #' @param base    Symbol before the subscript (e.g. "p", "L", "Sym").
 #' @param sub     Subscript text (LaTeX, e.g. "CA" or "\\alpha").
@@ -152,6 +159,8 @@ group_labels <- c(
 
 #' Group of each parameter: the adherence parameters, else the name prefix
 #' (Sens, L, p = transition probabilities incl. p_HCC, Sym).
+#'
+#' Ref: none (plot grouping; groups follow the Fig. 2D panels).
 #'
 #' @param nm  Parameter names.
 #' @return Character vector of group names (names of `group_labels`).
@@ -231,6 +240,8 @@ NON_MODIFIABLE_PARAMS <- c(
 # Shortest decimal string (15-17 significant digits) that R's own parser reads
 # back to exactly the same double. (R's parser is not always correctly rounded,
 # so "%.17g" alone does not guarantee an exact round trip.)
+#' @param x  A double.
+#' @return A string that parses back to exactly `x`.
 round_trip_string <- function(x) {
   for (digits in 15:17) {
     s <- sprintf(paste0("%.", digits, "g"), x)
@@ -243,6 +254,9 @@ round_trip_string <- function(x) {
 #'
 #' Re-recording a name overwrites it. Rows are sorted by name (C locale, so the
 #' order does not depend on the user's locale).
+#'
+#' Ref: none (bookkeeping for the numbers quoted in the manuscript).
+#'
 #' @param values Named numeric vector or list of scalars.
 #' @param path Ledger CSV path.
 #' @return The full ledger as a named numeric vector, invisibly.

@@ -91,9 +91,9 @@ band_label <- function(probs) {
 
 # ----- Bootstrap sweeps -------------------------------------------------------
 
-# One model evaluation: `fn` at default parameters overridden by `overrides`,
-# with `arg` set to `x`. `arg` is a model parameter, or a keyword argument of
-# `fn` such as the screening interval `m`.
+#' One model evaluation: `fn` at default parameters overridden by `overrides`,
+#' with `arg` set to `x`. `arg` is a model parameter, or a keyword argument of
+#' `fn` such as the screening interval `m`.
 eval_at <- function(fn, x, arg, overrides, t) {
   swept <- setNames(list(x), arg)
   if (arg %in% names(params_def)) {
@@ -316,6 +316,7 @@ stage_distribution_by_risk <- function(
 stage_distribution_over_time <- function(years, n = 100) {
   months <- 0:(years * 12)
   rows <- purrr::map(months, ~ progress_untreated(n = n, t = .x))
+  # months to years: Ref: none (unit conversion)
   dplyr::bind_cols(tibble::tibble(x = months / 12), dplyr::bind_rows(rows))
 }
 
@@ -591,6 +592,8 @@ plot_scenarios_all <- function(point, boot) {
 #' @return Long tibble `x`, `value` (life-years), `group` (the curve name).
 response_curves <- function(specs) {
   dplyr::bind_rows(lapply(specs, function(s) {
+    # percentage points to a proportion; Ref: Cumming 2024, Sec. 2.4
+    # (absolute percentage-point changes)
     x <- 0:s$max / 100
     vals <- vapply(
       x,
@@ -628,7 +631,7 @@ plot_response_curves <- function(curves, title, x_lab, group_lab) {
 }
 
 # ----- Bootstrap calibration figures (analysis/01) ----------------------------
-# The five monthly progression probabilities p_0..p_D in long form.
+#' The five monthly progression probabilities p_0..p_D in long form.
 rates_long <- function(pars) {
   pars[STAGE_P_NAMES] |> pivot_longer(everything())
 }
@@ -713,6 +716,8 @@ plot_rates_hist <- function(pars, rates_tbl) {
 #' 95% interval of the mean years in each BCLC stage (1 / p / 12).
 plot_time_range <- function(pars, rates_tbl) {
   ci <- rates_long(pars) |>
+    # Ref: Cumming 2024, Sec. 3.1 / Fig. 2A (mean time in stage = 1 / p
+    # months, shown in years)
     mutate(mean_years = 1 / value / 12, name = fct_inorder(name)) |>
     group_by(name) |>
     summarise(
@@ -722,6 +727,7 @@ plot_time_range <- function(pars, rates_tbl) {
   ggplot(ci, aes(name, ymin = mean025, ymax = mean975)) +
     geom_errorbar() +
     geom_point(
+      # Ref: Cumming 2024, Fig. 2A (point estimate, 1 / p / 12 years)
       aes(x = rate, y = 1 / Point / 12),
       data = rates_tbl,
       inherit.aes = FALSE
@@ -787,6 +793,9 @@ plot_baseline_hist <- function(pars) {
     geom_vline(xintercept = life_add(), colour = "red") +
     theme_hcc() +
     scale_y_continuous(expand = expansion(0), limits = c(0, 0.08)) +
+    # Finding P4: Supp. Fig. S3 caption says N(mu = 68.0, sd = 5.7). Here the
+    # normal uses the bootstrap mean (about 67.6); 68.0 is life_add(), the
+    # red line. Ref: Supplement Fig. S3 (p. 10).
     geom_function(
       fun = dnorm,
       args = list(mean = mean(pars$Baseline), sd = sd(pars$Baseline)),
@@ -816,6 +825,7 @@ plot_pcor_heatmap <- function(pcor) {
     guides(fill = guide_colourbar(title = "Partial Rank\nCoefficient"))
 }
 
+#' Bar chart of the partial correlations of the Baseline row.
 plot_pcor_baseline <- function(pcor) {
   d <- tibble(Variable = fct_inorder(setdiff(colnames(pcor), "Baseline")))
   d$value <- unname(pcor["Baseline", as.character(d$Variable)])

@@ -16,11 +16,18 @@
 #' Increments are relative to the incoming value, so a bootstrapped Sens_0 or
 #' Sens_A is shifted, not replaced.
 #'
+#' Ref: Cumming 2024, Sec. 2.4 (p. 6), scenarios 1a, 1b, 2 and 3.
+#'
 #' - baseline:  current practice (no change)
-#' - real_adh:  realistic adherence improvement (paper Sec. 2.4)
-#' - opt_adh:   optimistic adherence improvement
-#' - diag_sens: ultrasound sensitivity +0.05 for BCLC 0, A and B
-#' - treat:     better treatment, i.e. longer life gained per stage at diagnosis
+#' - real_adh:  realistic adherence improvement (Sec. 2.4, scenario 1a:
+#'              p_NA -5, p_CA +10, p_Att +10 percentage points)
+#' - opt_adh:   optimistic adherence improvement (scenario 1b: p_NA -10,
+#'              p_CA +15, p_Att +20 percentage points)
+#' - diag_sens: ultrasound sensitivity +0.05 for BCLC 0, A and B (scenario 2)
+#' - treat:     better treatment, i.e. longer life gained per stage at
+#'              diagnosis (scenario 3: L_A +1 year, L_B +0.5 year)
+#'
+#' @format A named list of functions `params -> params`.
 #'
 #' NOTE (finding P6): the paper text lists only L_A and L_B for the treatment
 #' scenario, but the code, and the published 9.0 life-years, also include
@@ -28,18 +35,21 @@
 scenario_defs <- list(
   baseline = function(p) p,
   real_adh = function(p) {
+    # Ref: Cumming 2024, Sec. 2.4, scenario 1a (percentage points, absolute)
     modify_params(
       p,
       list(p_NA = p$p_NA - 0.05, p_CA = p$p_CA + 0.10, p_Att = p$p_Att + 0.10)
     )
   },
   opt_adh = function(p) {
+    # Ref: Cumming 2024, Sec. 2.4, scenario 1b
     modify_params(
       p,
       list(p_NA = p$p_NA - 0.10, p_CA = p$p_CA + 0.15, p_Att = p$p_Att + 0.20)
     )
   },
   diag_sens = function(p) {
+    # Ref: Cumming 2024, Sec. 2.4, scenario 2 (+5 points for stages 0, A, B)
     modify_params(
       p,
       list(
@@ -50,6 +60,7 @@ scenario_defs <- list(
     )
   },
   treat = function(p) {
+    # Ref: Cumming 2024, Sec. 2.4, scenario 3 (L_A +1 year, L_B +6 months)
     modify_params(
       p,
       list(L_A = p$L_A + 1, L_B = p$L_B + 0.5, L_C = p$L_C + 0.5) # L_C: see P6
@@ -59,9 +70,21 @@ scenario_defs <- list(
 
 #' Multipliers on the annual HCC incidence p_HCC for the three risk levels
 #' (Supplementary Figs. S6-S7): half (low risk) and double (high risk).
+#'
+#' Ref: Supplement Sec. 5 (p. 14: "half and double the assumed risk") and
+#' Figs. S6-S7 captions (1% and 4% per year).
+#' Finding P2: paper Sec. 2.5 (p. 6) says annual risks of 1.1% (low) and
+#' 2.2% (high); the code uses x0.5 and x2 of p_HCC = 2.2%, i.e. 1.1% and
+#' 4.4%, as in the supplement.
+#'
+#' @format A named numeric vector (base, low_risk, high_risk).
 risk_multipliers <- c(base = 1, low_risk = 0.5, high_risk = 2)
 
 #' The one mapping from internal scenario ids to everything legacy.
+#'
+#' Ref: none (bookkeeping; scenario names follow Cumming 2024, Sec. 2.4).
+#'
+#' @format A tibble with columns id, column, label, ledger_key.
 #'
 #' - id:         name in `scenario_defs`
 #' - column:     legacy column in data-derived/resampled_pars_fin.rds
@@ -98,6 +121,10 @@ scenario_table <- tibble::tribble(
 #' Legacy cross differences between two improvement scenarios, `a - b`.
 #' The legacy suffixes are confusing: "_3" means "vs scen_2" (diagnosis
 #' sensitivity) and "_4" means "vs scen_3" (treatment).
+#'
+#' Ref: none (bookkeeping for the legacy columns).
+#'
+#' @format A tibble with columns column, a, b.
 cross_diff_table <- tibble::tribble(
   ~column,
   ~a,
@@ -122,6 +149,9 @@ stopifnot(identical(scenario_table$id, names(scenario_defs)))
 # ----- Running scenarios ------------------------------------------------------
 
 #' Life-years for every scenario x risk level x parameter draw.
+#'
+#' Ref: Cumming 2024, Sec. 2.4 (life years gained per cohort of 100 over 10
+#' years, compared with the status quo) and Sec. 2.5 (risk levels).
 #'
 #' @param param_rows    Tibble of parameter draws, one row per draw; columns
 #'                      that are not model parameters are ignored, and
@@ -148,6 +178,7 @@ run_scenarios <- function(
   rows <- if (derive_sym_b) prepare_draws(param_rows) else draws(param_rows)
   one_draw <- function(i, mult, def) {
     p <- modify_params(params_def, as.list(rows[i, ]))
+    # Ref: Supplement Sec. 5 (p. 14, half / double the baseline p_HCC)
     p$p_HCC <- p$p_HCC * mult
     life_add(params = def(p))
   }
@@ -165,6 +196,7 @@ run_scenarios <- function(
     out$draw[out$scenario == "baseline"],
     out$risk[out$scenario == "baseline"]
   )
+  # Ref: Cumming 2024, Sec. 2.4 (p. 6: compared to the status quo)
   out$diff <- out$ly - base_ly[match(paste(out$draw, out$risk), base_key)]
   out
 }
@@ -178,6 +210,8 @@ run_scenarios <- function(
 #' per scenario (`scenario_table$column`) and its `_diff` against baseline; the
 #' base risk level additionally gets the cross differences of
 #' `cross_diff_table` (scen_1a_3 etc.). Column order matches the legacy file.
+#'
+#' Ref: none (reshaping); differences as in Cumming 2024, Sec. 2.4 (p. 6).
 #'
 #' @param long  Output of `run_scenarios()`.
 #' @return Tibble with one row per draw.
@@ -195,6 +229,7 @@ scenario_columns <- function(long) {
   base_ly <- by_scenario("base", "ly", scenario_table$id)
   cross <- lapply(seq_len(nrow(cross_diff_table)), function(k) {
     ly <- setNames(base_ly, scenario_table$id)
+    # Ref: Cumming 2024, Sec. 3.3 (scenario vs scenario comparisons)
     ly[[cross_diff_table$a[k]]] - ly[[cross_diff_table$b[k]]]
   })
   setNames(cross, cross_diff_table$column)
