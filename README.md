@@ -194,10 +194,38 @@ curl -fsSL https://github.com/posit-dev/air/releases/latest/download/air-install
 
 | Hook | What it does |
 |------|-------------|
-| `pre-commit` | Runs `air format` on staged `.R` files and re-stages them automatically |
+| `pre-commit` | Runs `air format` on staged `.R` files and re-stages them automatically, then runs the lint ratchet on them and blocks the commit if any file has more lints than its baseline |
 | `commit-msg` | Enforces [git3moji](https://robinpokorny.github.io/git3moji/) prefixes: `:zap:` `:bug:` `:tv:` `:cop:` `:abc:` |
 
 Format any file manually with `air format <file.R>`, or format the whole project with `air format .`.
+
+### Lint ratchet
+
+Lint rules live in `.lintr` (line length 80 to match `air.toml`; `object_name_linter` and `indentation_linter` are disabled because the code follows paper notation such as `p_HCC` and air owns formatting).
+The legacy code still has many lints, so instead of a hard zero-lint gate the repository uses a ratchet: `tools/lint_baseline.csv` records each file's allowed lint count, and a file may never exceed it.
+A file not in the baseline must have zero lints.
+
+```bash
+Rscript tools/lint_ratchet.R [files...]   # check (default: all project .R files)
+Rscript tools/lint_ratchet.R --update     # lower the baseline after fixing lints
+```
+
+`--update` refuses to raise any count, so the baseline can only go down.
+The target is an empty baseline (all counts 0).
+
+### Tests
+
+```bash
+Rscript -e 'testthat::test_dir("tests/testthat")'
+```
+
+The suite takes a few seconds.
+Never run `run_all.R` as a test; it takes about 30 minutes.
+
+### Continuous integration
+
+`.github/workflows/check.yml` runs on every push and pull request (Ubuntu, R version and packages from `renv.lock`).
+It runs `air format --check .`, the lint ratchet, and the test suite.
 
 ---
 

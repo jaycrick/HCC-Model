@@ -1,0 +1,42 @@
+name: check
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: true
+
+      # R version is taken from renv.lock.
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: renv
+          use-public-rspm: true
+
+      - uses: r-lib/actions/setup-renv@v2
+
+      # Pinned so a new air release cannot change formatting and fail CI;
+      # keep in step with the version developers run locally (`air --version`).
+      - name: Install air
+        run: |
+          curl -fsSL https://github.com/posit-dev/air/releases/download/0.4.1/air-installer.sh | sh
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Check formatting
+        run: air format --check .
+
+      - name: Lint ratchet
+        run: Rscript tools/lint_ratchet.R
+
+      - name: Tests
+        run: Rscript -e 'testthat::test_dir("tests/testthat", stop_on_failure = TRUE)'

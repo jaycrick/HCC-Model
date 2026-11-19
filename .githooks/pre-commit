@@ -1,11 +1,5 @@
 #!/bin/sh
-# Format staged R files with air and re-stage them.
-
-if ! command -v air >/dev/null 2>&1; then
-  echo "WARNING: air not found — skipping R format check." >&2
-  echo "Install with: curl -fsSL https://github.com/posit-dev/air/releases/latest/download/air-installer.sh | sh" >&2
-  exit 0
-fi
+# Format staged R files with air and re-stage them, then run the lint ratchet.
 
 # Collect staged .R files that are added/modified (not deleted)
 staged=$(git diff --cached --name-only --diff-filter=ACM | grep '\.R$')
@@ -14,16 +8,29 @@ if [ -z "$staged" ]; then
   exit 0
 fi
 
-# Format each file and re-stage
-changed=0
-for file in $staged; do
-  air format "$file"
-  git add "$file"
-  changed=1
-done
-
-if [ "$changed" -eq 1 ]; then
+if command -v air >/dev/null 2>&1; then
+  # Format each file and re-stage
+  for file in $staged; do
+    air format "$file"
+    git add "$file"
+  done
   echo "air: formatted staged R files and re-staged." >&2
+else
+  echo "WARNING: air not found — skipping R format check." >&2
+  echo "Install with: curl -fsSL https://github.com/posit-dev/air/releases/latest/download/air-installer.sh | sh" >&2
+fi
+
+# Lint ratchet: staged files may not have more lints than the baseline.
+if command -v Rscript >/dev/null 2>&1; then
+  # shellcheck disable=SC2086
+  if ! Rscript tools/lint_ratchet.R $staged >&2; then
+    echo "" >&2
+    echo "COMMIT BLOCKED: lint ratchet failed (see lints above)." >&2
+    echo "Fix them; lint counts may only go down (tools/lint_baseline.csv)." >&2
+    exit 1
+  fi
+else
+  echo "WARNING: Rscript not found — skipping lint ratchet." >&2
 fi
 
 exit 0
