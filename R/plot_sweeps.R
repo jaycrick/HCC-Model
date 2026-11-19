@@ -24,7 +24,9 @@ eval_at <- function(fn, x, arg, overrides, t) {
 #' bootstrap draw.
 #'
 #' Draws go through `prepare_draws()`, so Sym_B = SYM_B_RATIO * Sym_A in each
-#' (finding C7). The point estimate uses the default parameters.
+#' (finding C7). The point estimate uses the default parameters and the scalar
+#' path; the draws are evaluated by the vectorised engine, one call per grid
+#' value, on a column-parameter list built once.
 #'
 #' @param fn     `life_add` or `screen_by_adherence`.
 #' @param grid   Values of `arg`.
@@ -33,17 +35,37 @@ eval_at <- function(fn, x, arg, overrides, t) {
 #' @param fixed  Named list of parameter overrides held fixed.
 #' @param t      Follow-up months.
 #' @return List with `point` (one result per grid value) and `draws` (per grid
-#'   value, a list with one result per draw).
+#'   value, a numeric vector over draws for `life_add`, or a draws x 7 matrix
+#'   for `screen_by_adherence`).
 sweep_model <- function(fn, grid, arg, boot, fixed = list(), t = 120) {
+  vec_fn <- if (identical(fn, life_add)) {
+    life_add_vec
+  } else if (identical(fn, screen_by_adherence)) {
+    screen_by_adherence_mat
+  } else {
+    stop("`fn` must be life_add or screen_by_adherence")
+  }
   pd <- prepare_draws(boot)
-  rows <- lapply(seq_len(nrow(pd)), function(i) lapply(pd, `[[`, i))
+  # defaults, then each draw's columns, then the fixed overrides
+  cols <- modify_params(params_def, as.list(pd))
+  cols <- modify_params(cols, fixed)
+  m <- 6 # default ultrasound interval of life_add()
+  eval_grid <- function(x) {
+    p <- cols
+    if (arg == "m") {
+      m <- x
+    } else {
+      p <- modify_params(p, setNames(list(x), arg))
+    }
+    if (nrow(pd) == 0) {
+      r <- vec_fn(params_def, 100, t, m) # no draws: keep the result's shape
+      return(if (is.matrix(r)) r[0, , drop = FALSE] else r[0])
+    }
+    vec_fn(p, 100, t, m)
+  }
   list(
     point = lapply(grid, eval_at, fn = fn, arg = arg, overrides = fixed, t = t),
-    draws = lapply(grid, function(x) {
-      lapply(rows, function(r) {
-        eval_at(fn, x, arg, utils::modifyList(r, fixed), t)
-      })
-    })
+    draws = lapply(grid, eval_grid)
   )
 }
 
@@ -65,11 +87,7 @@ sweep_life_years <- function(
   t = 120
 ) {
   res <- sweep_model(life_add, grid, arg, boot, fixed, t)
-  ci <- vapply(
-    res$draws,
-    function(v) summarise_ci(unlist(v), probs),
-    numeric(2)
-  )
+  ci <- vapply(res$draws, summarise_ci, numeric(2), probs = probs)
   out <- tibble::tibble(
     x = grid,
     point = unlist(res$point),
@@ -96,7 +114,7 @@ sweep_stage_diagnoses <- function(
   stages <- stage_list[2:6]
   res <- sweep_model(screen_by_adherence, grid, arg, boot, fixed, t)
   rows <- lapply(seq_along(grid), function(k) {
-    mat <- do.call(rbind, lapply(res$draws[[k]], function(d) unlist(d[stages])))
+    mat <- res$draws[[k]]
     ci <- vapply(stages, function(s) summarise_ci(mat[, s], probs), numeric(2))
     tibble::tibble(
       x = grid[k],

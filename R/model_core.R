@@ -116,11 +116,111 @@ progress_untreated <- function(..., n = 100, t = 120, params = params_def) {
 
 # ----- Ultrasound detection model (by attendance probability) -----------------
 
+#' N x k matrix of the named parameters, recycling length-1 entries to N rows.
+#'
+#' Ref: none (helper for the vectorised engine).
+#'
+#' @param params  Named list; each element has length 1 or N.
+#' @param nms     Names of the parameters to extract.
+#' @param N       Number of rows.
+#' @return N x length(nms) numeric matrix.
+param_matrix <- function(params, nms, N) {
+  matrix(unlist(lapply(params[nms], rep_len, N)), nrow = N)
+}
+
+#' Number of parallel cohorts implied by the (possibly vector) inputs.
+#'
+#' Ref: none (helper for the vectorised engine).
+#'
+#' @param params  Named parameter list (each element length 1 or N).
+#' @param ...     Further vectors (`Pr_Att`, `n`) of length 1 or N.
+#' @return Integer N (the longest input length).
+n_cohorts <- function(params, ...) {
+  max(lengths(params), lengths(list(...)))
+}
+
+#' Vectorised ultrasound detection model: N cohorts at once.
+#'
+#' Same model and same order of operations as the scalar loop (each month:
+#' progress, symptomatic detection, and every `m` months attended ultrasound),
+#' but on an N x 7 state matrix with element-wise column updates instead of
+#' `vec %*% tmat` (the transition matrix is almost all zeros).
+#'
+#' Ref: Cumming 2024, Fig. 1 (treatment layer: symptoms or incidental
+#' diagnosis with probability Sym_X, else 6-monthly ultrasound that is
+#' attended with probability p_Att and detects with probability Sens_X) and
+#' Sec. 2.1 (p. 4, scheduled surveillance).
+#'
+#' @param Pr_Att  Attendance probability, length 1 or N.
+#' @param params  Named parameter list (like `params_def`); each element has
+#'                length 1 or N.
+#' @param n       Cohort size, length 1 or N.
+#' @param t       Total follow-up in months.
+#' @param m       Ultrasound interval in months.
+#' @return List with `dx` and `undiagnosed`, both N x 7 matrices with
+#'   colnames `stage_list`.
+screen_cohort_mat <- function(Pr_Att, params, n, t, m) {
+  N <- n_cohorts(params, Pr_Att, n)
+  # Ref: Cumming 2024, Fig. 1 (arrow probabilities; p_HCC is annual)
+  p <- cbind(
+    annual_to_monthly(rep_len(params$p_HCC, N)),
+    param_matrix(params, STAGE_P_NAMES, N)
+  )
+  stay <- 1 - p # same expression as transition_matrix()
+  # Ref: Cumming 2024, Fig. 1 and Tables 2-3 (Sym_X; Cirrhosis 0, Death 1)
+  sym_prob <- cbind(0, param_matrix(params, STAGE_SYM_NAMES, N), 1)
+  # Ref: Cumming 2024, Fig. 1 and Tables 2-3 (Sens_X)
+  US_probs <- cbind(0, param_matrix(params, STAGE_SENS_NAMES, N), 1)
+  # Ref: Cumming 2024, Fig. 1 (attend ultrasound: p_NA, p_CA, p_Att)
+  attend <- cbind(0, matrix(rep_len(Pr_Att, N), N, 5), 1)
+  vec <- cbind(rep_len(n, N), matrix(0, N, 6)) # undiagnosed per state
+  Dx <- matrix(0, N, 7)
+  for (i in 1:t) {
+    # Ref: Cumming 2024, Fig. 1 ("1 month", progress to next BCLC stage)
+    vec <- progress_step(vec, p, stay)
+    # Ref: Cumming 2024, Fig. 1 (symptoms or incidental diagnosis, Sym_X)
+    sym <- vec * sym_prob
+    Dx <- Dx + sym
+    vec <- vec - sym
+    # Ref: Cumming 2024, Fig. 1 (6 months since last scheduled ultrasound?)
+    if (i %% m == 0) {
+      # Ref: Cumming 2024, Fig. 1 (attend ultrasound? HCC detected? Sens_X)
+      us <- (vec * attend) * US_probs
+      Dx <- Dx + us
+      vec <- vec - us
+    }
+  }
+  colnames(Dx) <- colnames(vec) <- stage_list
+  list(dx = Dx, undiagnosed = vec)
+}
+
+#' One monthly step of the progression model on an N x 7 state matrix.
+#'
+#' Equivalent to `vec %*% transition_matrix(...)`, with terms added in the same
+#' order (k = 1..7).
+#'
+#' Ref: Cumming 2024, Sec. 2.1 and Fig. 1 (arrows p_HCC, p_0, ..., p_D).
+#'
+#' @param vec   N x 7 undiagnosed people per state.
+#' @param p     N x 6 progression probabilities out of states 1..6.
+#' @param stay  `1 - p`.
+#' @return N x 7 matrix after one month.
+progress_step <- function(vec, p, stay) {
+  new <- vec
+  new[, 1] <- vec[, 1] * stay[, 1]
+  for (j in 2:6) {
+    new[, j] <- vec[, j - 1] * p[, j - 1] + vec[, j] * stay[, j]
+  }
+  new[, 7] <- vec[, 6] * p[, 6] + vec[, 7]
+  new
+}
+
 #' Theoretical ultrasound detection for a cohort with a given attendance prob.
 #'
 #' Each month the cohort moves one step through the transition matrix, then
 #' symptomatic detection removes `Sym_*` of each state, and every `m` months
-#' attending people are screened with sensitivity `Sens_*`.
+#' attending people are screened with sensitivity `Sens_*`. Thin wrapper
+#' around `screen_cohort_mat()` with N = 1.
 #'
 #' Ref: Cumming 2024, Fig. 1 (treatment layer: symptoms or incidental
 #' diagnosis with probability Sym_X, else 6-monthly ultrasound that is
@@ -147,53 +247,48 @@ screen_cohort <- function(
   params = params_def
 ) {
   params <- modify_params(params, list(...))
-  tmat <- transition_matrix(
-    annual_to_monthly(params$p_HCC), # p_HCC is annual (Table 2)
-    unlist(params[STAGE_P_NAMES])
-  )
-  vec <- c(n, rep(0, 6)) # undiagnosed people per state
-  Dx <- rep(0, 7) # diagnosed people
-  # Ref: Cumming 2024, Fig. 1 and Tables 2-3 (Sym_X; Cirrhosis 0, Death 1)
-  sym_prob <- c(
-    0,
-    unlist(params[STAGE_SYM_NAMES]),
-    1
-  )
-  # Ref: Cumming 2024, Fig. 1 and Tables 2-3 (Sens_X)
-  US_probs <- c(
-    0,
-    unlist(params[STAGE_SENS_NAMES]),
-    1
-  )
-  # Ref: Cumming 2024, Fig. 1 (attend ultrasound: p_NA, p_CA, p_Att)
-  attend <- c(0, rep(Pr_Att, 5), 1) # who goes to the ultrasound
-  for (i in 1:t) {
-    # Ref: Cumming 2024, Fig. 1 ("1 month", progress to next BCLC stage)
-    vec <- vec %*% tmat
-    # Ref: Cumming 2024, Fig. 1 (symptoms or incidental diagnosis, Sym_X)
-    sym <- vec * sym_prob # detected through symptoms
-    Dx <- Dx + sym
-    vec <- vec - sym
-    # Ref: Cumming 2024, Fig. 1 (6 months since last scheduled ultrasound?)
-    if (i %% m == 0) {
-      # Ref: Cumming 2024, Fig. 1 (attend ultrasound?)
-      go <- vec * attend # how many actually go to the ultrasound
-      # Ref: Cumming 2024, Fig. 1 (HCC detected? Sens_X)
-      us <- go * US_probs # detected by ultrasound
-      Dx <- Dx + us
-      vec <- vec - us
-    }
-  }
+  res <- screen_cohort_mat(Pr_Att, params, n, t, m)
   list(
-    dx = setNames(as.numeric(Dx), stage_list),
-    undiagnosed = setNames(as.numeric(vec), stage_list)
+    dx = setNames(as.numeric(res$dx), stage_list),
+    undiagnosed = setNames(as.numeric(res$undiagnosed), stage_list)
   )
 }
 
 
 # ----- Adherence-stratified detection model -----------------------------------
 
+#' Vectorised adherence-stratified diagnoses: N parameter sets at once.
+#'
+#' Stacks the three adherence groups as 3N rows, runs `screen_cohort_mat()`
+#' once, then adds the groups in the order non- + partial + complete.
+#'
+#' Ref: Cumming 2024, Sec. 2.1 (p. 4: completely adherent, partially adherent
+#' and non-adherent cohorts), Table 3 (p_NA, p_CA, p_Att); Supplement
+#' Sec. 3.1 (Pr(partially adherent) = 1 - Pr(non-) - Pr(completely adherent)).
+#'
+#' @param params  Named parameter list; each element has length 1 or N.
+#' @param n       Cohort size (length 1 or N).
+#' @param t       Follow-up months.
+#' @param m       Ultrasound interval months.
+#' @return N x 7 matrix (people diagnosed per stage), colnames `stage_list`.
+screen_by_adherence_mat <- function(params, n, t, m) {
+  N <- n_cohorts(params, n)
+  p_NA <- rep_len(params$p_NA, N)
+  p_CA <- rep_len(params$p_CA, N)
+  # Ref: Supplement Sec. 3.1 (p. 11, partially adherent = 1 - p_NA - p_CA)
+  n_grp <- c(n * p_NA, n * (1 - p_NA - p_CA), n * p_CA)
+  # Ref: Cumming 2024, Sec. 2.1 (attendance 0, p_Att and 1 per cohort)
+  att <- c(rep(0, N), rep_len(params$p_Att, N), rep(1, N))
+  stacked <- lapply(params, function(x) rep(rep_len(x, N), 3))
+  dx <- screen_cohort_mat(att, stacked, n_grp, t, m)$dx
+  rows <- split(seq_len(3 * N), rep(1:3, each = N))
+  (dx[rows[[1]], , drop = FALSE] + dx[rows[[2]], , drop = FALSE]) +
+    dx[rows[[3]], , drop = FALSE]
+}
+
 #' Combine detection across three adherence groups (non-, partial, complete).
+#'
+#' Thin wrapper around `screen_by_adherence_mat()` with N = 1.
 #'
 #' Ref: Cumming 2024, Sec. 2.1 (p. 4: completely adherent, partially adherent
 #' and non-adherent cohorts), Table 3 (p_NA, p_CA, p_Att); Supplement
@@ -214,27 +309,42 @@ screen_by_adherence <- function(
   params = params_def
 ) {
   params <- modify_params(params, list(...))
-  # people in each adherence group: non-, partially, completely adherent
-  # Ref: Supplement Sec. 3.1 (p. 11, partially adherent = 1 - p_NA - p_CA)
-  adh_group <- n * c(params$p_NA, 1 - params$p_NA - params$p_CA, params$p_CA)
-
-  caught <- function(n_group, Pr_Att) {
-    dx <- screen_cohort(Pr_Att, n = n_group, t = t, m = m, params = params)$dx
-    as_tibble(as.list(dx))
-  }
-
-  # Ref: Cumming 2024, Sec. 2.1 (attendance 0, p_Att and 1 per cohort)
-  map2_dfr(adh_group, c(0, params$p_Att, 1), caught) |>
-    summarise_all(sum)
+  dx <- screen_by_adherence_mat(params, n, t, m)
+  as_tibble(dx, .name_repair = "minimal")
 }
 
 
 # ----- Life-years added by surveillance and treatment -------------------------
 
+#' Vectorised life years added by the surveillance programme: N draws at once.
+#'
+#' Columns are accumulated left to right (as `sum()` does) so the result
+#' matches the scalar calculation.
+#'
+#' Ref: Cumming 2024, Sec. 2.1 (p. 5: diagnoses per stage multiplied by the
+#' additional life expectancy L_X) and Table 2 (L_0 .. L_D).
+#'
+#' @param params  Named parameter list; each element has length 1 or N.
+#' @param n       Cohort size (length 1 or N).
+#' @param t       Follow-up months.
+#' @param m       Ultrasound interval months.
+#' @return Numeric vector of length N (life-years per cohort of n).
+life_add_vec <- function(params, n, t, m) {
+  dx <- screen_by_adherence_mat(params, n, t, m)
+  # Ref: Cumming 2024, Sec. 2.1 (p. 5), Table 2 (L_X)
+  Lmat <- cbind(0, param_matrix(params, STAGE_L_NAMES, nrow(dx)), 0)
+  s <- 0
+  for (k in 1:7) {
+    s <- s + dx[, k] * Lmat[, k]
+  }
+  unname(s)
+}
+
 #' Total life years added by the HCC surveillance programme.
 #'
 #' Sums the product of stage-specific diagnoses and stage-specific life-year
-#' gains (L_*) across all adherence groups.
+#' gains (L_*) across all adherence groups. Thin wrapper around
+#' `life_add_vec()` with N = 1.
 #'
 #' Ref: Cumming 2024, Sec. 2.1 (p. 5: diagnoses per stage multiplied by the
 #' additional life expectancy L_X) and Table 2 (L_0 .. L_D).
@@ -248,10 +358,7 @@ screen_by_adherence <- function(
 #' @return Scalar life-years gained per cohort of n.
 life_add <- function(..., n = 100, t = 120, m = 6, params = params_def) {
   params <- modify_params(params, list(...))
-  stage_caught <- screen_by_adherence(n = n, t = t, m = m, params = params)
-  L <- unname(unlist(params[STAGE_L_NAMES]))
-  # Ref: Cumming 2024, Sec. 2.1 (p. 5), Table 2 (L_X)
-  sum(stage_caught * c(0, L, 0)) # life-years: sum_stage Dx_stage * L_stage
+  life_add_vec(params, n, t, m)
 }
 
 

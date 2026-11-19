@@ -176,21 +176,27 @@ run_scenarios <- function(
 ) {
   stopifnot("defs needs a 'baseline' scenario" = "baseline" %in% names(defs))
   rows <- if (derive_sym_b) prepare_draws(param_rows) else draws(param_rows)
-  one_draw <- function(i, mult, def) {
-    p <- modify_params(params_def, as.list(rows[i, ]))
-    # Ref: Supplement Sec. 5 (p. 14, half / double the baseline p_HCC)
-    p$p_HCC <- p$p_HCC * mult
-    life_add(params = def(p))
-  }
+  N <- nrow(param_rows)
+  cols <- modify_params(params_def, as.list(rows)) # built once
+  S <- length(defs)
+  R <- length(risk)
   out <- tidyr::expand_grid(
-    draw = seq_len(nrow(param_rows)),
+    draw = seq_len(N),
     scenario = names(defs),
     risk = names(risk)
   )
-  out$ly <- purrr::pmap_dbl(
-    list(out$draw, out$scenario, out$risk),
-    function(d, s, r) one_draw(d, risk[[r]], defs[[s]])
-  )
+  out$ly <- numeric(nrow(out))
+  for (s in seq_len(S)) {
+    for (r in seq_len(R)) {
+      p <- cols
+      # Ref: Supplement Sec. 5 (p. 14, half / double the baseline p_HCC)
+      p$p_HCC <- p$p_HCC * risk[[r]]
+      ly <- life_add_vec(defs[[s]](p), 100, 120, 6)
+      # expand_grid order: draw outermost, then scenario, then risk
+      idx <- (seq_len(N) - 1) * S * R + (s - 1) * R + r
+      out$ly[idx] <- rep_len(ly, N)
+    }
+  }
   base_ly <- out$ly[out$scenario == "baseline"]
   base_key <- paste(
     out$draw[out$scenario == "baseline"],

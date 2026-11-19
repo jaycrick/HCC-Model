@@ -260,7 +260,7 @@ Rscript -e 'testthat::test_dir("tests/testthat")'
 ```
 
 The suite takes a few seconds.
-Never run `run_all.R` as a test; it takes about 30 minutes.
+Never run `run_all.R` as a test; it takes about 1-2 minutes (without `--bootstrap`).
 The tests fall into four groups:
 
 - **Golden** (`test-golden.R`, `tests/testthat/fixtures/golden.rds`): pins the code as it is, bugs included. The fixture is generated once by `fixtures/make_golden.R` and regenerated only under an approved, recorded change (see `CHANGES.md`). Doubles are compared at relative tolerance **1e-12**: portable across platforms (libm/BLAS noise is about 1e-15), while real model changes are at least 1e-3.

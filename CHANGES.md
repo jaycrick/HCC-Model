@@ -1,6 +1,6 @@
 # Changes
 
-## Structural changes (no numerical effect), S1-S10
+## Structural changes (no numerical effect; S11 below 1e-12, see entry), S1-S11
 
 - S1: characterisation, invariant and paper-anchor test suite (golden values
   in `tests/testthat/fixtures/golden.rds`); lint ratchet, pre-commit check and
@@ -26,6 +26,39 @@
   `STAGE_L_NAMES`, `ADHERENCE_PARAMS`, `FIGURE_FORMATS`, `FIGURE_DPI_ALL`,
   `NM_START`; `renv.lock` no longer records ggsci and mc2d. No golden value
   changed.
+- S11: vectorised cohort engine. `screen_cohort_mat()` runs N parameter sets at
+  once on an N x 7 state matrix, with element-wise updates in place of
+  `vec %*% tmat`. The three adherence groups are stacked as 3N rows
+  (`screen_by_adherence_mat()`), and `life_add_vec()` gives life-years per
+  draw. `screen_cohort()`, `screen_by_adherence()` and `life_add()` are thin
+  N = 1 wrappers with unchanged signatures. `sweep_model()` makes one call per
+  grid value instead of one per draw, and `run_scenarios()` one call per
+  scenario x risk.
+  - Numerical effect: NOT bit-identical. On this machine (arm64, reference
+    BLAS) `%*%` rounds differently from the element-wise sum (probably FMA
+    contraction in the BLAS; not verified). Measured: the `life_add()`
+    baseline golden is bit-identical; the other goldens differ by up to 3.6e-16
+    relative, the full-size sweep objects by up to 6.5e-16 and
+    `run_scenarios()` by up to 5.8e-16. In `output/manuscript_values.csv`, 11
+    of 85 values change, by at most 4.3e-15 relative. The largest are
+    differences of nearby quantities (cancellation), with absolute differences
+    about 1e-14. All are far below the 1e-12 gate. Two JPGs change only in
+    anti-aliasing pixels (attendance by p_CA, increasing adherence); the PDFs
+    already differed between identical runs (embedded timestamps). Before this
+    change the ledger already differed by 1 ulp from an earlier run
+    (`real_adh_lower_high_risk`).
+  - Timing (arm64 macOS, R 4.6):
+
+    | step | before | after |
+    |---|---|---|
+    | analysis/03 | 1778 s (under Rprof) | 64 s |
+    | `Rscript run_all.R` (no `--bootstrap`) | ~30-37 min | 71 s |
+    | `run_scenarios()`, 200 draws | 4.8 s | 0.18 s |
+    | `run_scenarios()`, 10,000 draws (01 `--bootstrap`) | ~4 min (extrapolated) | 6.7 s |
+    | `fit_point_estimate()` | 4.0 s | 4.0 s (unchanged) |
+
+    `fit_point_estimate()` spends 90% in hypogeom `cfgeom`/fft via
+    `DescTools::dOrder` (external code).
 
 # Changes that alter model output
 
