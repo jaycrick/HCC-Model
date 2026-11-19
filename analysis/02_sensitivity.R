@@ -2,7 +2,7 @@
 #
 # Univariate sensitivity analyses for the HCC surveillance model.
 # Reads Parameters.csv and Parameters_25.csv from data/.
-# Writes figures to figures/ and updates data-derived/param_names.rds.
+# Writes figures to figures/ and records values in output/manuscript_values.csv.
 #
 # Figures written:
 #   sens_anal_univariate.jpg
@@ -82,9 +82,7 @@ merged_names <- paste(
   param_chang_tbl$Bound,
   sep = "_"
 )
-param_names <- readRDS(here("data-derived", "param_names.rds"))
-param_names[merged_names] <- param_chang_tbl$years_mid_comp
-saveRDS(param_names, file = here("data-derived", "param_names.rds"))
+record_values(setNames(param_chang_tbl$years_mid_comp, merged_names))
 
 plot_tornado(
   param_chang_tbl,

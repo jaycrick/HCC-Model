@@ -1,5 +1,5 @@
 file,count
-analysis/01_bootstrap_params.R,42
+analysis/01_bootstrap_params.R,41
 analysis/02_sensitivity.R,3
 analysis/03_progression_model.R,3
 analysis/04_clinical_scenarios.R,0
@@ -17,6 +17,7 @@ tests/testthat/test-core.R,0
 tests/testthat/test-data.R,0
 tests/testthat/test-golden.R,1
 tests/testthat/test-invariants.R,1
+tests/testthat/test-ledger.R,0
 tests/testthat/test-likelihood.R,6
 tests/testthat/test-paper.R,0
 tests/testthat/test-plotting.R,0

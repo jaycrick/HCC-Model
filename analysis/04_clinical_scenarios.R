@@ -3,7 +3,7 @@
 # Clinical scenario comparisons under baseline, low-risk, and high-risk
 # HCC incidence assumptions.
 # Requires data-derived/resampled_pars_fin.rds (from 01_bootstrap_params.R)
-# and data-derived/param_names.rds (updated by 02_sensitivity.R).
+# (read-only).
 #
 # Figures written to figures/:
 #   scenarios_all.jpg
@@ -93,12 +93,11 @@ for (k in seq_len(nrow(risk_figures))) {
   sfx <- ifelse(risk == "base", "", paste0("_", risk))
   d <- scenario_diff_data(point, resampled_pars, risk)
 
-  param_names <- readRDS(here("data-derived", "param_names.rds"))
   key <- d$points$ledger_key
-  param_names[paste0(key, sfx)] <- d$points[[2]]
-  param_names[paste0(key, "_lower", sfx)] <- d$points$lowCI
-  param_names[paste0(key, "_upper", sfx)] <- d$points$highCI
-  saveRDS(param_names, file = here("data-derived", "param_names.rds"))
+  record_values(setNames(
+    c(d$points[[2]], d$points$lowCI, d$points$highCI),
+    c(paste0(key, sfx), paste0(key, "_lower", sfx), paste0(key, "_upper", sfx))
+  ))
 
   plot_scenario_violins(d, risk_figures$xlab[k], risk_figures$ymax[k]) |>
     save_figure(paste0("scenarios_new", sfx), 6, 4, dpi = all_three)

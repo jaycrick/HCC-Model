@@ -220,3 +220,57 @@ NON_MODIFIABLE_PARAMS <- c(
   "p_D",
   paste0("Sym_", c("0", "A", "B", "C", "D"))
 )
+
+# ----- Manuscript-values ledger -----------------------------------------------
+# Every number quoted in the manuscript is recorded here, in one place, by
+# record_values(). The ledger is output/manuscript_values.csv (name, value),
+# sorted by name and written at a precision that round-trips exactly, so it
+# is text-diffable. data-derived/ is read-only input: nothing writes to it
+# except the deliberate `--bootstrap` regeneration in analysis/01.
+
+# Shortest decimal string (15-17 significant digits) that R's own parser reads
+# back to exactly the same double. (R's parser is not always correctly rounded,
+# so "%.17g" alone does not guarantee an exact round trip.)
+round_trip_string <- function(x) {
+  for (digits in 15:17) {
+    s <- sprintf(paste0("%.", digits, "g"), x)
+    if (identical(as.numeric(s), x)) return(s)
+  }
+  sprintf("%.17g", x)
+}
+
+#' Merge named scalar values into the manuscript-values ledger.
+#'
+#' Re-recording a name overwrites it. Rows are sorted by name (C locale, so the
+#' order does not depend on the user's locale).
+#' @param values Named numeric vector or list of scalars.
+#' @param path Ledger CSV path.
+#' @return The full ledger as a named numeric vector, invisibly.
+record_values <- function(
+  values,
+  path = here::here("output", "manuscript_values.csv")
+) {
+  values <- unlist(values)
+  stopifnot(
+    is.numeric(values),
+    !is.null(names(values)),
+    !anyNA(names(values)),
+    all(nzchar(names(values))),
+    !anyDuplicated(names(values))
+  )
+  ledger <- if (file.exists(path)) {
+    old <- utils::read.csv(path, stringsAsFactors = FALSE)
+    stats::setNames(as.numeric(old$value), old$name)
+  } else {
+    numeric(0)
+  }
+  ledger[names(values)] <- values
+  ledger <- ledger[order(names(ledger), method = "radix")]
+  dir.create(dirname(path), showWarnings = FALSE, recursive = TRUE)
+  out <- data.frame(
+    name = names(ledger),
+    value = vapply(ledger, round_trip_string, character(1), USE.NAMES = FALSE)
+  )
+  utils::write.csv(out, path, row.names = FALSE, quote = FALSE)
+  invisible(ledger)
+}

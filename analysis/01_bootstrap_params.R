@@ -13,7 +13,14 @@
 # Outputs written to data-derived/:
 #   resampled_pars.rds     — 8 bootstrapped transition parameters (10 000 rows)
 #   resampled_pars_fin.rds — as above plus scenario life-year columns
-#   param_names.rds        — named list of key reported values for the manuscript
+#
+# The manuscript values are recorded to output/manuscript_values.csv via
+# record_values() (R/setup.R); data-derived/param_names.rds is a frozen,
+# read-only reference and is no longer written.
+#
+# The saveRDS() calls below that write resampled_pars*.rds are the ONLY writes
+# to data-derived/ in the pipeline. They deliberately regenerate inputs and run
+# only when this script is run directly (run_all.R --bootstrap).
 #
 # Figures written to figures/:
 #   Bootstrap_sample_ranges.{jpg,png,pdf}
@@ -167,6 +174,7 @@ resampled_pars <- tibble(list_of_pars) %>%
   ) %>%
   suppressMessages()
 
+# Deliberate regeneration of an input (see header): --bootstrap only.
 saveRDS(resampled_pars, file = here("data-derived", "resampled_pars.rds"))
 
 resampled_pars <- readRDS(here("data-derived", "resampled_pars.rds"))
@@ -181,17 +189,7 @@ table(resampled_pars$p_A < resampled_pars$p_B)
 table(resampled_pars$p_A < resampled_pars$p_C)
 table(resampled_pars$p_A < resampled_pars$p_D)
 
-# Initialise param_names ledger (or update if it already exists)
-if (file.exists(here("data-derived", "param_names.rds"))) {
-  param_names <- readRDS(here("data-derived", "param_names.rds"))
-} else {
-  param_names <- list()
-}
-param_names[c("muA_gt_mu0")] <- table(
-  resampled_pars$p_A < resampled_pars$p_0
-)[["TRUE"]] /
-  10000
-saveRDS(param_names, file = here("data-derived", "param_names.rds"))
+record_values(c(muA_gt_mu0 = mean(resampled_pars$p_A < resampled_pars$p_0)))
 
 # ----- Rates table for plotting -----------------------------------------------
 rate_labels <- c(
@@ -312,24 +310,12 @@ HCC_Time_Range_Plot <- ggplot(
 
 HCC_Time_Range_Plot
 
-param_names <- readRDS(here("data-derived", "param_names.rds"))
-param_names[c("mean_0", "mean_A", "mean_B", "mean_C", "mean_D")] <-
-  1 / rates_tbl$Point / 12
-param_names[c(
-  "mean_0_Lower",
-  "mean_A_Lower",
-  "mean_B_Lower",
-  "mean_C_Lower",
-  "mean_D_Lower"
-)] <- 1 / rates_tbl$Upper / 12
-param_names[c(
-  "mean_0_Upper",
-  "mean_A_Upper",
-  "mean_B_Upper",
-  "mean_C_Upper",
-  "mean_D_Upper"
-)] <- 1 / rates_tbl$Lower / 12
-saveRDS(param_names, file = here("data-derived", "param_names.rds"))
+stage_ids <- c("0", "A", "B", "C", "D")
+record_values(c(
+  setNames(1 / rates_tbl$Point / 12, paste0("mean_", stage_ids)),
+  setNames(1 / rates_tbl$Upper / 12, paste0("mean_", stage_ids, "_Lower")),
+  setNames(1 / rates_tbl$Lower / 12, paste0("mean_", stage_ids, "_Upper"))
+))
 
 save_figure(
   HCC_Time_Range_Plot,
@@ -420,30 +406,18 @@ pairs(
   head(resampled_pars, 1000) %>% select(c("p_0", "p_A", "p_B", "p_C", "p_D"))
 )
 
-param_names <- readRDS(here("data-derived", "param_names.rds"))
-param_names[c(
-  "opt_vs_diag",
-  "opt_vs_treat",
-  "opt_vs_real",
-  "real_vs_diag",
-  "real_vs_treat",
-  "treat_vs_diag"
-)] <- c(
-  table(resampled_pars$scen_1b_diff > resampled_pars$scen_2_diff)[["TRUE"]] /
-    10000,
-  table(resampled_pars$scen_1b_diff > resampled_pars$scen_3_diff)[["TRUE"]] /
-    10000,
-  table(resampled_pars$scen_1b_diff > resampled_pars$scen_1a_diff)[["TRUE"]] /
-    10000,
-  table(resampled_pars$scen_1a_diff > resampled_pars$scen_2_diff)[["TRUE"]] /
-    10000,
-  table(resampled_pars$scen_1a_diff > resampled_pars$scen_3_diff)[["TRUE"]] /
-    10000,
-  table(resampled_pars$scen_3_diff > resampled_pars$scen_2_diff)[["TRUE"]] /
-    10000
-)
-saveRDS(param_names, file = here("data-derived", "param_names.rds"))
+record_values(c(
+  opt_vs_diag = mean(resampled_pars$scen_1b_diff > resampled_pars$scen_2_diff),
+  opt_vs_treat = mean(resampled_pars$scen_1b_diff > resampled_pars$scen_3_diff),
+  opt_vs_real = mean(resampled_pars$scen_1b_diff > resampled_pars$scen_1a_diff),
+  real_vs_diag = mean(resampled_pars$scen_1a_diff > resampled_pars$scen_2_diff),
+  real_vs_treat = mean(
+    resampled_pars$scen_1a_diff > resampled_pars$scen_3_diff
+  ),
+  treat_vs_diag = mean(resampled_pars$scen_3_diff > resampled_pars$scen_2_diff)
+))
 
+# Deliberate regeneration of an input (see header): --bootstrap only.
 saveRDS(resampled_pars, file = here("data-derived", "resampled_pars_fin.rds"))
 
 resampled_pars <- readRDS(here("data-derived", "resampled_pars_fin.rds"))
@@ -480,12 +454,10 @@ save_figure(
   dpi = c(jpg = 300, png = 600, pdf = 600)
 )
 
-param_names <- readRDS(here("data-derived", "param_names.rds"))
-param_names[c("sd_noint", "mean_noint")] <- c(
-  sd(resampled_pars$Baseline),
-  mean(resampled_pars$Baseline)
-)
-saveRDS(param_names, file = here("data-derived", "param_names.rds"))
+record_values(c(
+  sd_noint = sd(resampled_pars$Baseline),
+  mean_noint = mean(resampled_pars$Baseline)
+))
 
 ggplot(resampled_pars, aes(x = Baseline)) +
   geom_boxplot() +
@@ -592,13 +564,11 @@ save_figure(
 detach("package:ppcor", unload = TRUE)
 detach("package:MASS", unload = TRUE)
 
-param_names <- readRDS(here("data-derived", "param_names.rds"))
-param_names[c("pcor_logit_0", "pcor_logit_US_0", "pcor_logit_US_A")] <- c(
-  pcor_matrix_logit["Baseline", "p_0"],
-  pcor_matrix_logit["Baseline", "Sens_0"],
-  pcor_matrix_logit["Baseline", "Sens_A"]
-)
-saveRDS(param_names, file = here("data-derived", "param_names.rds"))
+record_values(c(
+  pcor_logit_0 = unname(pcor_matrix_logit["Baseline", "p_0"]),
+  pcor_logit_US_0 = unname(pcor_matrix_logit["Baseline", "Sens_0"]),
+  pcor_logit_US_A = unname(pcor_matrix_logit["Baseline", "Sens_A"])
+))
 
 # ----- Results summary table --------------------------------------------------
 default_param_tbl <- tibble(params = list(hypo_probs)) %>%

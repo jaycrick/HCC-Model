@@ -66,7 +66,7 @@ risk_multipliers <- c(base = 1, low_risk = 0.5, high_risk = 2)
 #' - id:         name in `scenario_defs`
 #' - column:     legacy column in data-derived/resampled_pars_fin.rds
 #' - label:      axis label in the scenario figures
-#' - ledger_key: prefix of the entries in data-derived/param_names.rds
+#' - ledger_key: prefix of the entries in output/manuscript_values.csv (record_values)
 #'               (NA for the baseline, which has no improvement to report)
 scenario_table <- tibble::tribble(
   ~id,
