@@ -16,6 +16,16 @@ partial, and completely adherent groups), and stage-specific treatment outcomes 
 estimate life-years gained under various surveillance-improvement scenarios relative to
 a current-practice baseline over a 10-year horizon.
 
+
+> [!IMPORTANT]
+> **Results differ from the publication.** In November 2026 the calibration was
+> re-done with the exact likelihood and a better optimiser, and all 10,000 bootstrap
+> resamples were refitted (gates G8, G9). The scenario point estimates still match
+> the paper (9.8, 17.2, 7.0, 9.0 life-years per 100), but several confidence intervals
+> and the partial correlations do not. See
+> [Errata and differences from the publication](#errata-and-differences-from-the-publication)
+> at the bottom of this file.
+
 ---
 
 ## Quick start
@@ -297,22 +307,6 @@ It runs `air format --check .` (air pinned to the version in the workflow), the 
 
 ---
 
-## Known errata in the publication
-
-Where the publication and the code disagree, the code was kept so that the published numbers reproduce. Each item is also a comment at the relevant line of code.
-
-| ID | Where | What |
-|----|-------|------|
-| P1 | Supplement p. 6 | The printed Pr(d_alpha) omits the (1 - Sym) factors; the code uses the correct form (0.3289 at the MLE against 52/158 = 0.329 observed). |
-| P2 | Paper Sec. 2.5 | The text gives low / high annual HCC risks of 1.1% / 2.2% (2.2% is also the baseline); the code, and Supplement Sec. 5 ("half and double"), use x0.5 and x2 of p_HCC (1.1% and 4.4%). The Supplement Figs. S6-S7 captions say 1% and 4%. |
-| P3 | Paper Sec. 2.2.2 | "52 of n = 156"; the Supplement (s-bar = 158) and the code use 158. |
-| P4 | Supplement Fig. S3 caption | Says N(mu = 68.0); 68.0 is the point estimate `life_add()`. The fitted normal in the code uses the bootstrap mean (about 67.6). |
-| P5 | Supplement Table S2 | Lists 14 states; the code adds a 15th absorbing state `past_A` (progressed past BCLC A undiagnosed). Also, Pr(d_0) uses the t^(100) approximation (error about 1.5e-6) rather than the exact closed form, because it generated the published MLE. **Closed by G8**: the code now uses exact absorption probabilities. See `CHANGES.md`. |
-| P6 | Paper Sec. 2.4, scenario 3 | The text lists L_A +1 year and L_B +6 months only; the code, and the published 9.0 life-years, also add L_C + 0.5. |
-| P7 | Table 3 / `Parameters.csv` | The published MLE is Nelder-Mead's stopping point at its default tolerance, not an exact optimum (NLL 2e-4 above a tight BFGS optimum); negligible next to the bootstrap intervals. **Closed by G9**: `fit_mle()` polishes with a bounded L-BFGS-B, and the whole bootstrap was refitted locally. See `CHANGES.md`. |
-
----
-
 ## Citation
 
 Please cite the associated manuscript:
@@ -345,3 +339,76 @@ See also `CITATION.cff` for a machine-readable citation.
 ## License
 
 MIT — see `LICENSE`.
+
+---
+
+## Errata and differences from the publication
+
+Cumming et al. 2024, *Cancers* 16(15):2745, and its Supplement. Full details,
+before/after tables and the complete ledger diff are in `CHANGES.md` (gates G8, G9;
+findings P1-P7). The published values are kept, frozen, in
+`data-derived/param_names.rds` and in the comments of `tests/testthat/test-paper.R`.
+
+### A. Published numbers the current code no longer reproduces (G8, G9)
+
+Two methodological fixes change the calibrated parameters:
+
+- **G8 (finding P5):** the likelihood uses the exact absorption probabilities of the
+  absorbing Markov chain instead of the T^100 approximation.
+- **G9 (finding P7):** the maximum-likelihood fit is Nelder-Mead followed by a
+  bounded L-BFGS-B on the logit scale, and all 10,000 bootstrap resamples were
+  refitted locally (`tools/refit_calibration.R`). Every refit is at least as good as
+  the original HPC fit. The original fits had stopped early in the tails of the
+  bootstrap distribution: in 418 resamples (4.2%) the best fit has ultrasound
+  sensitivity in BCLC 0 (Sens_0) at its upper limit of 1.
+
+As a result, the point estimates barely move but the bootstrap intervals widen:
+
+| Quantity | Published | Current code | Location in paper |
+|---|---|---|---|
+| Sens_0, 95% CI | 0.08 to 0.54 | 0.08 to 1.00 | Table 3 |
+| p_0, 95% CI | 0.031 to 0.240 | 0.030 to 0.482 | Table 3 |
+| p_B, 95% CI | 0.20 to 0.74 | 0.21 to 0.89 | Table 3 |
+| p_C, 95% CI | 0.22 to 0.57 | 0.21 to 0.51 | Table 3 |
+| Realistic adherence, 95% CI | 7.9 to 11.6 | 7.9 to 11.7 | Abstract, Sec. 3.3 |
+| Optimistic adherence, 95% CI | 13.9 to 20.3 | 13.8 to 20.5 | Abstract, Sec. 3.3 |
+| Diagnosis sensitivity, 95% CI | 3.6 to 13.8 | **2.5** to 14.1 | Abstract, Sec. 3.3 |
+| Treatment, 95% CI | 7.5 to 10.3 | 7.4 to 10.3 | Abstract, Sec. 3.3 |
+| Optimistic > diagnosis (%) | 98.4 | 98.1 | Table 4 |
+| Realistic > diagnosis (%) | 80.1 | 77.4 | Table 4 |
+| Treatment > diagnosis (%) | 74.7 | 71.4 | Table 4 |
+| Realistic > treatment (%) | 73.6 | 73.9 | Table 4 |
+| Mean months in stage, lower CI (0, B, C, D) | 4.2, 1.4, 1.7, 6.1 | 2.1, 1.1, 2.0, 6.2 | Sec. 3.1, Fig. 2A |
+| Mean months in stage, upper CI (0, B, C, D) | 32.6, 4.9, 4.5, 7.8 | 33.0, 4.8, 4.8, 7.7 | Sec. 3.1, Fig. 2A |
+| Bootstraps with stage A longer than stage 0 (%) | 73 | 70 | Sec. 3.1 |
+| SE of baseline life-years | 5.7 | 6.0 | Sec. 3.4 |
+| Partial correlation, life-years ~ logit(p_0) | -0.87 | +0.29 | Sec. 3.4 |
+| Partial correlation, life-years ~ logit(Sens_0) | 0.92 | -0.02 | Sec. 3.4 |
+| +/-25% sensitivity, L_A upper (years) | 5.7 | 5.6 | Sec. 3.2 |
+
+Unchanged at the paper's printed precision: the scenario point estimates
+(9.8, 17.2, 7.0 and 9.0 life-years per cohort of 100), the other Table 3 intervals and
+the other +/-25% results. `life_add()` moves from 68.023 to 68.034.
+
+**Partial correlations.** The reversal is an artefact of the logit scale: the boundary
+fits (Sens_0 near 1) become extreme outliers on that scale and dominate the partial
+correlations. Rank-based (Spearman) partial correlations are robust to this and agree
+with the published conclusion: life-years ~ p_0 **-0.85**, ~ Sens_0 **+0.90**,
+~ Sens_A **+0.51** (ledger names `pcor_rank_0`, `pcor_rank_US_0`, `pcor_rank_US_A`).
+The logit analysis is kept as the published method.
+
+### B. Errors and inconsistencies in the publication text
+
+The items below are differences between the paper's text and the analysis that
+produced its numbers. Except where marked closed, the code keeps the analysis
+behaviour. Each item is also a comment at the relevant line of code.
+
+| ID | Where | What |
+|----|-------|------|
+| P1 | Supplement p. 6 | The printed Pr(d_alpha) omits the (1 - Sym) factors; the code uses the correct form (0.3289 at the MLE against 52/158 = 0.329 observed). |
+| P2 | Paper Sec. 2.5 | The text gives low / high annual HCC risks of 1.1% / 2.2% (2.2% is also the baseline); the code, and Supplement Sec. 5 ("half and double"), use x0.5 and x2 of p_HCC (1.1% and 4.4%). The Supplement Figs. S6-S7 captions say 1% and 4%. |
+| P3 | Paper Sec. 2.2.2 | "52 of n = 156"; the Supplement (s-bar = 158) and the code use 158. |
+| P4 | Supplement Fig. S3 caption | Says N(mu = 68.0); 68.0 is the point estimate `life_add()`. The fitted normal in the code uses the bootstrap mean (about 67.6 published; 67.5 after G9). |
+| P5 | Supplement Table S2 | Lists 14 states; the code adds a 15th absorbing state `past_A` (progressed past BCLC A undiagnosed). Also, Pr(d_0) uses the t^(100) approximation (error about 1.5e-6) rather than the exact closed form, because it generated the published MLE. **Closed by G8**: the code now uses exact absorption probabilities. See `CHANGES.md`. |
+| P6 | Paper Sec. 2.4, scenario 3 | The text lists L_A +1 year and L_B +6 months only; the code, and the published 9.0 life-years, also add L_C + 0.5. |
+| P7 | Table 3 / `Parameters.csv` | The published MLE is Nelder-Mead's stopping point at its default tolerance, not an exact optimum (NLL 2e-4 above a tight BFGS optimum); negligible next to the bootstrap intervals. **Closed by G9**: `fit_mle()` polishes with a bounded L-BFGS-B, and the whole bootstrap was refitted locally. See `CHANGES.md`. |
