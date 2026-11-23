@@ -76,7 +76,7 @@ baseline <- readRDS(
 )
 
 test_that("the frozen published reference param_names.rds is unchanged", {
-  frozen <- readRDS(here::here("data-derived", "param_names.rds"))
+  frozen <- readRDS(paper_path("data-derived", "param_names.rds"))
   expect_length(frozen, 91)
   # published value as stored (commit 6902e05); G9 changed the ledger, not this
   expect_equal(

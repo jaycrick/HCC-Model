@@ -8,6 +8,7 @@ suppressPackageStartupMessages({
   library(DescTools)
 })
 
+options(hcc.paper = "2024-cancers") # paths: paper_path() in R/setup.R
 source(here::here("R", "setup.R"))
 source(here::here("R", "model_core.R"))
 source(here::here("R", "bootstrap.R"))
@@ -22,11 +23,11 @@ source(here::here("R", "plot_calibration.R"))
 csv_par <- unlist(params_def[NLL_PAR_NAMES])
 
 resampled_pars_fin <- readRDS(
-  here::here("data-derived", "resampled_pars_fin.rds")
+  paper_path("data-derived", "resampled_pars_fin.rds")
 )
 
-csv_main <- here::here("data", "Parameters.csv")
-csv_25 <- here::here("data", "Parameters_25.csv")
+csv_main <- paper_path("data", "Parameters.csv")
+csv_25 <- paper_path("data", "Parameters_25.csv")
 read_params <- function(csv) read.csv(csv, row.names = 1)
 
 golden_path <- function() {

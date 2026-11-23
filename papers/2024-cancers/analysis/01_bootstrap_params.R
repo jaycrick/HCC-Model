@@ -1,4 +1,4 @@
-# analysis/01_bootstrap_params.R
+# papers/2024-cancers/analysis/01_bootstrap_params.R
 #
 # Bootstrap parameter estimation for the HCC surveillance model.
 #
@@ -39,6 +39,7 @@
 #   multipanel_cals.{png,pdf}
 
 # ----- Initialise -------------------------------------------------------------
+options(hcc.paper = "2024-cancers") # paths: paper_path() in R/setup.R
 source(here::here("R", "setup.R"))
 source(here::here("R", "model_core.R"))
 source(here::here("R", "bootstrap.R"))
@@ -50,7 +51,7 @@ source(here::here("R", "plot_calibration.R"))
 
 library(hypogeom) # Written for this project by D. Pavlyshyn; see README
 
-dir.create(here("figures"), showWarnings = FALSE)
+dir.create(paper_path("figures"), showWarnings = FALSE)
 
 # ===== 1. ESTIMATE =====
 # Point estimates are data/Parameters.csv (written by tools/refit_calibration.R
@@ -68,15 +69,18 @@ message(
 )
 
 # The bootstrap refit (tools/refit_calibration.R) wrote these draws.
-resampled_pars <- readRDS(here("data-derived", "resampled_pars.rds"))
+resampled_pars <- readRDS(paper_path("data-derived", "resampled_pars.rds"))
 
 set.seed(315)
 resampled_pars <- bind_cols(
   resampled_pars,
   scenario_columns(run_scenarios(resampled_pars))
 )
-saveRDS(resampled_pars, file = here("data-derived", "resampled_pars_fin.rds"))
-resampled_pars <- readRDS(here("data-derived", "resampled_pars_fin.rds"))
+saveRDS(
+  resampled_pars,
+  file = paper_path("data-derived", "resampled_pars_fin.rds")
+)
+resampled_pars <- readRDS(paper_path("data-derived", "resampled_pars_fin.rds"))
 
 # ===== 2. SUMMARISE =====
 rates_tbl <- rates_table(resampled_pars, point_par)
@@ -113,7 +117,10 @@ record_values(c(
 # Sens_0 upper bound (logit about 13), so the logit pcor is dominated by those
 # outliers. Ranks are invariant to the logit, so the raw parameters are used.
 pcor_rank <- ppcor::pcor(pars_wide, method = "spearman")$estimate
-fit_diag <- readRDS(here("data-derived", "bootstrap_fit_diagnostics.rds"))$diag
+fit_diag <- readRDS(paper_path(
+  "data-derived",
+  "bootstrap_fit_diagnostics.rds"
+))$diag
 record_values(c(
   pcor_rank_0 = unname(pcor_rank["Baseline", "p_0"]),
   pcor_rank_US_0 = unname(pcor_rank["Baseline", "Sens_0"]),
@@ -215,7 +222,7 @@ save_all(plot_cor_base_logit, "plot_cor_base_logit", 6, 3)
 
 # Multipanel: calibration plots plus the 25%-variation univariate sensitivity.
 plot_univar_mod <- plot_tornado(
-  modifiable_sensitivity(life_tibble(here("data", "Parameters_25.csv"))),
+  modifiable_sensitivity(life_tibble(paper_path("data", "Parameters_25.csv"))),
   "years_mid_comp",
   x_lab = "Additional Life Years Gained",
   y_lab = NULL,

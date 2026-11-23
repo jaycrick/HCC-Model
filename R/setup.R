@@ -3,7 +3,7 @@
 # Defines libraries, conflict preferences, global constants, default
 # parameters, and shared visual objects.
 # Parameter values: Cumming 2024, Tables 2-3; their sources are listed in
-# the file Parameters_sources.csv (in data/).
+# the file Parameters_sources.csv (in papers/2024-cancers/data/).
 
 # ----- Libraries --------------------------------------------------------------
 library(conflicted) # must load first to intercept ambiguous calls
@@ -20,6 +20,26 @@ conflicts_prefer(
   dplyr::select,
   dplyr::lag
 )
+
+# ----- Paper directories ------------------------------------------------------
+# R/ is the model core shared by every paper. Each paper keeps its own inputs
+# and outputs in papers/<id>/ (data/, data-derived/, output/, figures/), and
+# the core reads and writes them only through paper_path(). The paper is
+# chosen with options(hcc.paper = "<id>"), which each paper's scripts set
+# before sourcing this file. The default is the published model, which is
+# also the regression reference for the test suite.
+DEFAULT_PAPER <- "2024-cancers"
+
+#' Path inside the active paper's directory.
+#'
+#' Ref: none (repository layout).
+#'
+#' @param ...    Path components below papers/<paper>/.
+#' @param paper  Paper id (directory name under papers/).
+#' @return An absolute path.
+paper_path <- function(..., paper = getOption("hcc.paper", DEFAULT_PAPER)) {
+  here::here("papers", paper, ...)
+}
 
 # ----- Reproducibility --------------------------------------------------------
 set.seed(4567385)
@@ -68,7 +88,7 @@ load_params <- function(csv, column = "POINT") {
 }
 
 # Named list of POINT estimates by PARAMETER name, e.g. params_def$p_HCC.
-params_def <- load_params(here("data", "Parameters.csv"))
+params_def <- load_params(paper_path("data", "Parameters.csv"))
 
 # ----- Line types, colour palette and ggplot scales ---------------------------
 my_linet <- as.vector(c(
@@ -266,7 +286,7 @@ round_trip_string <- function(x) {
 #' @return The full ledger as a named numeric vector, invisibly.
 record_values <- function(
   values,
-  path = here::here("output", "manuscript_values.csv")
+  path = paper_path("output", "manuscript_values.csv")
 ) {
   values <- unlist(values)
   stopifnot(

@@ -2,29 +2,49 @@
 
 [![git3moji](https://img.shields.io/badge/git3moji-%E2%9A%A1%EF%B8%8F%F0%9F%90%9B%F0%9F%93%BA%F0%9F%91%AE%F0%9F%94%A4-fffad8.svg?style=flat-square)](https://robinpokorny.github.io/git3moji/)
 
-Code for the model described in:
+An R implementation of a compartmental Markov model for hepatocellular
+carcinoma (HCC) surveillance in patients with cirrhosis after hepatitis C cure.
+The model tracks cohorts through BCLC disease stages (0, A, B, C, D) and death,
+and includes ultrasound screening sensitivity, patient adherence (non-, partial
+and completely adherent groups) and stage-specific treatment outcomes. It
+estimates life-years gained under surveillance-improvement scenarios relative to
+current practice.
 
-> Cumming J, Scott N, Howell J, Flores JE, Pavlyshyn D, Hellard ME, Winata LS, Ryan M, Sutherland T, Thompson AJ, Doyle JS, Sacks-Davis R.
-> **Improving Hepatocellular Carcinoma Surveillance Outcomes in Patients with Cirrhosis after Hepatitis C Cure: A Modelling Study.**
-> *Cancers* 2024, **16**(15), 2745. https://doi.org/10.3390/cancers16152745
+The model code in [`R/`](R) is shared by every paper that uses it. Each paper
+has its own folder under [`papers/`](papers) with its inputs, analysis scripts
+and outputs.
 
-This repository contains an R implementation of a deterministic compartmental Markov
-model for hepatocellular carcinoma (HCC) surveillance in patients with cirrhosis after
-hepatitis C cure. The model tracks cohorts through BCLC disease stages (0, A, B, C, D)
-and death, incorporating ultrasound screening sensitivity, patient adherence (non-,
-partial, and completely adherent groups), and stage-specific treatment outcomes to
-estimate life-years gained under various surveillance-improvement scenarios relative to
-a current-practice baseline over a 10-year horizon.
+## Papers
 
+| Folder | Paper | Status |
+|--------|-------|--------|
+| [`papers/2024-cancers`](papers/2024-cancers) | Cumming et al. **Improving Hepatocellular Carcinoma Surveillance Outcomes in Patients with Cirrhosis after Hepatitis C Cure: A Modelling Study.** *Cancers* 2024, 16(15), 2745. https://doi.org/10.3390/cancers16152745 | Published |
+| [`papers/stochastic`](papers/stochastic) | Stochastic model with additional compartments (working title) | In preparation |
 
-> [!IMPORTANT]
-> **Results differ from the publication.** In November 2026 the calibration was
-> re-done with the exact likelihood and a better optimiser, and all 10,000 bootstrap
-> resamples were refitted (gates G8, G9). The scenario point estimates still match
-> the paper (9.8, 17.2, 7.0, 9.0 life-years per 100), but several confidence intervals
-> and the partial correlations do not. See
-> [Errata and differences from the publication](#errata-and-differences-from-the-publication)
-> at the bottom of this file.
+## Versions and archives
+
+Each released version is a git tag and a
+[GitHub release](https://github.com/jaycrick/HCC-Model/releases). Tags never
+move. To get the code exactly as it was for a paper, use its tag, not `main`:
+`main` keeps changing as later papers extend the model.
+
+To cite the code, cite the paper it was used for (its DOI below). When you
+refer to a specific version of the code, also give the tag, because the
+paper's DOI identifies the paper, not a version of the code.
+
+| Paper | Paper DOI | Tag | Results match publication? |
+|-------|-----------|-----|----------------------------|
+| Cumming et al. 2024, *Cancers* | [10.3390/cancers16152745](https://doi.org/10.3390/cancers16152745) | [`v1.0.0-published`](https://github.com/jaycrick/HCC-Model/tree/v1.0.0-published) | **Yes**: the original scripts and data, as used for the paper |
+| Cumming et al. 2024, *Cancers* | [10.3390/cancers16152745](https://doi.org/10.3390/cancers16152745) | [`v1.1.0`](https://github.com/jaycrick/HCC-Model/tree/v1.1.0) | **Yes**: refactored and tested code; reproduces the published numbers |
+| Cumming et al. 2024, *Cancers* | [10.3390/cancers16152745](https://doi.org/10.3390/cancers16152745) | [`v1.2.0`](https://github.com/jaycrick/HCC-Model/tree/v1.2.0) | **No**: corrected calibration (G8, G9); point estimates match, some intervals do not ([errata](papers/2024-cancers/README.md#errata-and-differences-from-the-publication)) |
+| *(development)* | n/a | `main` | Same results as `v1.2.0`, with the per-paper layout |
+
+A release's source download (zip or tar.gz) does **not** contain the `.rds`
+files that can be regenerated from the code: in their place it has Git LFS
+pointer files. [Regenerating the .rds files](papers/2024-cancers/README.md#regenerating-the-rds-files)
+gives the exact commands for each version. Files that cannot be regenerated are
+plain git files, so the downloads contain them. A `git clone` followed by
+`git lfs pull` gets everything.
 
 ---
 
@@ -32,12 +52,13 @@ a current-practice baseline over a 10-year horizon.
 
 ```bash
 git clone https://github.com/jaycrick/HCC-Model.git && cd HCC-Model
-git lfs pull                          # download pre-computed bootstrap data
-Rscript -e 'renv::restore()'         # install packages at locked versions
-Rscript run_all.R                     # reproduce all figures → figures/
+git lfs pull                                   # download the derived .rds files
+Rscript -e 'renv::restore()'                   # install packages at locked versions
+Rscript papers/2024-cancers/run_all.R          # reproduce paper 1's figures
 ```
 
-Open `MODEL.Rproj` in RStudio or Positron to work interactively.
+Run scripts from the repository root, where `.Rprofile` activates renv. Open
+`MODEL.Rproj` in RStudio or Positron to work interactively.
 
 ---
 
@@ -72,76 +93,53 @@ This installs all packages at the exact versions recorded in `renv.lock`.
 
 ```
 .
-├── run_all.R               # Master script — reproduces all figures
-├── R/                      # Pure function definitions (sourced, not run directly)
-│   ├── setup.R             # Libraries, seeds, constants, default parameters
+├── R/                      # Shared model core (sourced, not run directly)
+│   ├── setup.R             # Libraries, seeds, constants, paper_path(), default parameters
 │   ├── model_core.R        # Markov transitions, US detection, adherence model
+│   ├── simulation.R        # Stochastic (binomial) version of the cohort model
+│   ├── scenarios.R         # Scenario definitions as data; run_scenarios()
+│   ├── bootstrap.R         # Calibration data, likelihood, bootstrap fitting
 │   ├── plot_theme.R        # theme_hcc(), save_figure(), interval helpers
 │   ├── plot_sweeps.R       # Bootstrap sweeps, band plots, stage distributions
 │   ├── plot_scenarios.R    # Tornado, scenario and response-curve plots
-│   ├── plot_calibration.R  # Bootstrap calibration figures (analysis/01)
-│   ├── simulation.R        # Stochastic check of the cohort model
-│   ├── scenarios.R         # Scenario definitions as data; run_scenarios()
-│   └── bootstrap.R         # Calibration data, likelihood, bootstrap inputs
-├── analysis/               # Numbered analysis scripts (run in order)
-│   ├── 01_bootstrap_params.R   # Scenarios + figures from the refitted bootstrap draws (skip by default); reads bootstrap_fit_diagnostics.rds
-│   ├── 02_sensitivity.R        # Univariate sensitivity analysis
-│   ├── 03_progression_model.R  # Progression & screening-frequency figures
-│   └── 04_clinical_scenarios.R # Clinical scenario comparisons
-├── data/                   # Read-only parameter inputs
-│   ├── Parameters.csv          # Point estimates and uncertainty bounds
-│   ├── Parameters_sources.csv  # Source and table reference per parameter
-│   └── Parameters_25.csv       # ±25% variation bounds
-├── data-derived/           # Pre-computed bootstrap outputs (Git LFS)
-│   ├── miltonoutput.rds             # Legacy HPC MLEs, superseded by the local refit (G9); kept for provenance
-│   ├── list_of_resampled_milton_output.rds  # Bootstrapped input data
-│   ├── resampled_pars.rds           # Refitted bootstrap parameters (n = 10 000; tools/refit_calibration.R)
-│   ├── bootstrap_fit_diagnostics.rds # Refit diagnostics (convergence, fallback, at-bound, audit)
-│   ├── resampled_pars_fin.rds       # As above + scenario life-year columns
-│   └── param_names.rds             # Named list of reported manuscript values
-├── output/                 # manuscript_values.csv: every number quoted in the paper
-├── tests/testthat/         # Test suite (see Tests)
-├── tools/                  # lint_ratchet.R, check_globals.R
-└── figures/                # Generated figures (git-ignored; reproduced by pipeline)
+│   └── plot_calibration.R  # Bootstrap calibration figures
+├── papers/
+│   ├── 2024-cancers/       # Paper 1 (published): see its README
+│   │   ├── run_all.R           # Reproduces all of the paper's figures
+│   │   ├── analysis/           # Numbered analysis scripts
+│   │   ├── data/               # Parameter CSVs
+│   │   ├── data-derived/       # Bootstrap data (.rds)
+│   │   ├── output/             # manuscript_values.csv (git-ignored)
+│   │   ├── figures/            # Generated figures (git-ignored)
+│   │   └── releases/           # Release notes for the v1.x tags
+│   └── stochastic/         # Paper 2 (in preparation)
+├── tests/testthat/         # Test suite: core invariants and paper 1's published values
+├── tools/                  # refit_calibration.R, lint_ratchet.R, check_globals.R
+├── CHANGES.md              # Every change that affects results, with before/after values
+└── CITATION.cff            # Machine-readable citation
 ```
 
----
+### How the core finds a paper's files
 
-## How to reproduce the figures
+The core never hard-codes a paper's folder. It reads and writes paper files
+through `paper_path()` (in `R/setup.R`), which resolves to
+`papers/<id>/...` for the paper chosen with `options(hcc.paper = "<id>")`.
+Every script in a paper folder sets this option before it sources
+`R/setup.R`. If the option is not set, the default is `2024-cancers`, the
+published model, which is also what the test suite checks.
 
-Run `Rscript run_all.R` from the project root (see [Quick start](#quick-start)). All figures are written to `figures/`.
+### Adding a paper
 
-### Run order
-
-Scripts must run in numerical order because downstream scripts read from
-`data-derived/`:
-
-| Script | Reads | Writes |
-|--------|-------|--------|
-| `01_bootstrap_params.R` | `resampled_pars.rds`, `bootstrap_fit_diagnostics.rds`, `list_of_resampled_*.rds` | `resampled_pars_fin.rds`, figures |
-| `02_sensitivity.R` | `Parameters.csv`, `Parameters_25.csv`, `param_names.rds` | `param_names.rds`, figures |
-| `03_progression_model.R` | `resampled_pars_fin.rds` | figures |
-| `04_clinical_scenarios.R` | `resampled_pars_fin.rds`, `param_names.rds` | `param_names.rds`, figures |
-
-`run_all.R` enforces this order. It skips `01_bootstrap_params.R` by default because the
-bootstrap outputs are already shipped in `data-derived/`. Pass `--bootstrap` to
-regenerate them (requires substantial compute; originally run on an HPC cluster):
-
-```bash
-Rscript run_all.R --bootstrap
-```
-
-The expensive calibration refit (point MLE plus 10 000 bootstrap resamples) is a
-separate one-off step, `tools/refit_calibration.R`; it writes
-`data-derived/resampled_pars.rds`, `bootstrap_fit_diagnostics.rds` and the
-calibrated rows of `data/Parameters.csv` and `Parameters_25.csv`:
-
-```bash
-Rscript tools/refit_calibration.R [--n 20] [--cores 10] [--config a|b|c] [--dry-run] [--out DIR]
-```
-
-`--dry-run` writes only to `--out` (default a temporary directory). Expected
-runtime: config d (default): about 1.5-3 h on a 10-core laptop (estimate); configs a-c are 3-10x slower.
+1. Create `papers/<id>/` with `data/`, `analysis/`, a `run_all.R` and a
+   `README.md`, following `papers/2024-cancers/`.
+2. Start every script with `options(hcc.paper = "<id>")`, then source the core
+   files from `R/`.
+3. Extend the core in `R/` so that paper 1 remains a special case. For example,
+   a new compartment whose flows are zero gives back the published 7-state
+   chain. The golden and paper-anchor tests then show that paper 1 is
+   unchanged. If a change to the core does move paper 1's results, record it
+   in `CHANGES.md` as a gate, as G1-G9 were.
+4. When the paper is submitted, make a release (see [Releasing](#releasing)).
 
 ---
 
@@ -150,7 +148,7 @@ runtime: config d (default): about 1.5-3 h on a 10-core laptop (estimate); confi
 To explore or modify the model outside the pipeline, source the two core files and call functions directly:
 
 ```r
-source("R/setup.R")      # loads packages; reads Parameters.csv into `params_def`
+source("R/setup.R")      # loads packages; reads the paper's Parameters.csv into `params_def`
 source("R/model_core.R") # defines progress_untreated(), screen_cohort(), screen_by_adherence(), life_add()
 # (R/bootstrap.R and R/scenarios.R are sourced the same way when needed)
 
@@ -170,7 +168,7 @@ life_add(p_CA = 0.5)
 ```
 
 `life_add()` accepts any combination of the model's 24 parameters as named arguments;
-all default to the point estimates in `params_def` (read from `data/Parameters.csv`).
+all default to the point estimates in `params_def` (read from the active paper's `data/Parameters.csv`; by default `papers/2024-cancers/data/Parameters.csv`).
 Unknown names are an error (e.g. `life_add(p_att = 1)`), and `n`, `t`, `m` and `params` are
 ordinary named arguments. To run on a different parameter set, pass
 `params = modify_params(params_def, list(p_HCC = 0.03))` or `load_params(csv)`.
@@ -197,7 +195,7 @@ the publication). Variables follow the paper's notation (`p_HCC`, `p_0`..`p_D`,
 | `prepare_draws(df)`, `draws(df)`, `years(df)` | model_core.R | Bootstrap draws ready for the model (`Sym_B = 8 * Sym_A`); life-years per draw |
 | `scenario_defs`, `risk_multipliers`, `run_scenarios(param_rows)` | scenarios.R | Scenarios as data; life-years per scenario x risk level x draw |
 | `scenario_columns(long)` | scenarios.R | Pivot `run_scenarios()` output to the legacy wide columns |
-| `record_values(values, path)` | setup.R | Merge named values into `output/manuscript_values.csv` |
+| `record_values(values, path)` | setup.R | Merge named values into the paper's `output/manuscript_values.csv` |
 | `calibration_data` | bootstrap.R | Observed calibration data (Supp. Sec. 2.1.1) |
 | `likelihood_matrix(p_0, p_A, sens_0, sens_A)` | bootstrap.R | The 15x15 transition matrix of Supp. Table S2 / matrix S1 |
 | `end_state_probs(tm, sens_0, t)` | bootstrap.R | Probability of ending in each state after `t` months |
@@ -206,33 +204,6 @@ the publication). Variables follow the paper's notation (`p_HCC`, `p_0`..`p_D`,
 | `bootstrap_inputs_long()`, `bootstrap_estimates()` | bootstrap.R | Read the shipped bootstrap inputs and MLEs |
 | `simulate_cohort(Pr_Att, ...)`, `simulate_by_adherence(...)` | simulation.R | Stochastic (binomial) check of the cohort model; not in the publication |
 | `theme_hcc()`, `save_figure()`, `sweep_*()`, `plot_*()` | plot_*.R | Figure helpers: data builders, plot functions and saving |
-
----
-
-## Data provenance
-
-| File | Source | Description |
-|------|--------|-------------|
-| `Parameters.csv` | Cumming 2024, Tables 1-3 | Point estimates and 95% bounds for all model parameters (point estimate = published MLE) |
-| `Parameters_sources.csv` | Cumming 2024, Tables 2-3 | `PARAMETER`, `SOURCE`, `TABLE_REF` for each row of `Parameters.csv`; unknowns are marked `TODO: confirm with author` |
-| `Parameters_25.csv` | Derived from Parameters.csv | ±25% variation bounds for modifiable parameters |
-| `miltonoutput.rds` | HPC cluster MLE run | Legacy HPC MLEs, superseded by the local refit (G9); kept for provenance |
-| `list_of_resampled_milton_output.rds` | Parametric bootstrap | Bootstrapped summary statistics used as MLE inputs |
-| `resampled_pars.rds` | `tools/refit_calibration.R` (G9) | Refitted bootstrap MLEs (8 transition + sensitivity parameters, 10 000 rows) |
-| `bootstrap_fit_diagnostics.rds` | `tools/refit_calibration.R` (G9) | Per-resample NLL, convergence code, best start, at-bound flags, old HPC NLL |
-| `resampled_pars_fin.rds` | Derived from `resampled_pars.rds` (by `01_bootstrap_params.R`) | As above with scenario life-year columns appended |
-| `param_names.rds` | Computed during pipeline | Named list of all values reported in the manuscript text |
-
----
-
-## Key model outputs (regression anchors)
-
-These values should be reproduced exactly from a clean run:
-
-- `life_add()` (baseline, default parameters) ≈ **68.03421** life years per cohort of 100
-- `life_add(p_NA = 1, p_CA = 0)` (no surveillance) ≈ **14.86345** life years
-
-Both are asserted via `stopifnot` in `04_clinical_scenarios.R`.
 
 ---
 
@@ -284,7 +255,7 @@ Rscript -e 'testthat::test_dir("tests/testthat")'
 ```
 
 The suite takes a few seconds.
-Never run `run_all.R` as a test; it takes about 1-2 minutes (without `--bootstrap`).
+Never run a paper's `run_all.R` as a test; it takes about 1-2 minutes (without `--bootstrap`).
 The tests fall into four groups:
 
 - **Golden** (`test-golden.R`, `tests/testthat/fixtures/golden.rds`): pins the code as it is, bugs included. The fixture is generated once by `fixtures/make_golden.R` and regenerated only under an approved, recorded change (see `CHANGES.md`). Doubles are compared at relative tolerance **1e-12**: portable across platforms (libm/BLAS noise is about 1e-15), while real model changes are at least 1e-3.
@@ -297,19 +268,46 @@ The tests fall into four groups:
 `.github/workflows/check.yml` runs on every push and pull request (Ubuntu, R version and packages from `renv.lock`).
 It runs `air format --check .` (air pinned to the version in the workflow), the lint ratchet, `tools/check_globals.R` and the test suite.
 
----
+### Releasing
 
-## Outputs
+Make a release whenever a paper is submitted, accepted or corrected:
 
-- `output/manuscript_values.csv` (columns `name`, `value`) is the ledger of every number quoted in the manuscript, written by `record_values()`. It is sorted by name and written at a precision that round-trips exactly, so it is text-diffable.
-- `data-derived/` is read-only input (the shipped bootstrap data). Nothing writes to it except the deliberate `Rscript run_all.R --bootstrap` regeneration.
-- `figures/` is generated by the pipeline and git-ignored.
+1. Add an entry to `CHANGES.md`. In `CITATION.cff`, set `version` and
+   `date-released`.
+2. Write release notes in `papers/<id>/releases/<tag>.md`, including how to
+   regenerate any `.rds` files that are in Git LFS.
+3. Tag the commit and publish the release:
+   ```bash
+   git tag -a vX.Y.Z -m "<one line>"
+   git push origin vX.Y.Z
+   gh release create vX.Y.Z --title "<title>" --notes-file papers/<id>/releases/vX.Y.Z.md
+   ```
+   In the paper's code-availability statement, give the repository URL and
+   the tag, e.g. "https://github.com/jaycrick/HCC-Model, release v2.0.0".
+4. When the paper is published, add its DOI to the version table above and to
+   the release notes on GitHub (release notes can be edited; tags cannot). In
+   `CITATION.cff`, make the new paper the `preferred-citation` (the one
+   GitHub's "Cite this repository" button shows) and move the previous one
+   under `references:`.
+5. Never move or delete a tag. If a released version needs a fix that `main`
+   should not get, create a maintenance branch from its tag
+   (`git switch -c paper1-maint v1.2.0`), fix it there and release
+   `v1.2.1` from that branch. Only do this when such a fix is needed.
+
+Optional backup: after a release, use "Save code now" at
+[Software Heritage](https://archive.softwareheritage.org/save/) on the
+repository URL. It archives the full history and every tag independently of
+GitHub, free and without an account (Git LFS content excluded).
+
+The rule for `.gitattributes`: Git LFS holds only files that can be
+regenerated. Any file that cannot be regenerated must be a plain git file so
+that release downloads contain it.
 
 ---
 
 ## Citation
 
-Please cite the associated manuscript:
+Please cite the paper whose results you use. For paper 1:
 
 ```bibtex
 @Article{cancers16152745,
@@ -342,73 +340,3 @@ MIT — see `LICENSE`.
 
 ---
 
-## Errata and differences from the publication
-
-Cumming et al. 2024, *Cancers* 16(15):2745, and its Supplement. Full details,
-before/after tables and the complete ledger diff are in `CHANGES.md` (gates G8, G9;
-findings P1-P7). The published values are kept, frozen, in
-`data-derived/param_names.rds` and in the comments of `tests/testthat/test-paper.R`.
-
-### A. Published numbers the current code no longer reproduces (G8, G9)
-
-Two methodological fixes change the calibrated parameters:
-
-- **G8 (finding P5):** the likelihood uses the exact absorption probabilities of the
-  absorbing Markov chain instead of the T^100 approximation.
-- **G9 (finding P7):** the maximum-likelihood fit is Nelder-Mead followed by a
-  bounded L-BFGS-B on the logit scale, and all 10,000 bootstrap resamples were
-  refitted locally (`tools/refit_calibration.R`). Every refit is at least as good as
-  the original HPC fit. The original fits had stopped early in the tails of the
-  bootstrap distribution: in 418 resamples (4.2%) the best fit has ultrasound
-  sensitivity in BCLC 0 (Sens_0) at its upper limit of 1.
-
-As a result, the point estimates barely move but the bootstrap intervals widen:
-
-| Quantity | Published | Current code | Location in paper |
-|---|---|---|---|
-| Sens_0, 95% CI | 0.08 to 0.54 | 0.08 to 1.00 | Table 3 |
-| p_0, 95% CI | 0.031 to 0.240 | 0.030 to 0.482 | Table 3 |
-| p_B, 95% CI | 0.20 to 0.74 | 0.21 to 0.89 | Table 3 |
-| p_C, 95% CI | 0.22 to 0.57 | 0.21 to 0.51 | Table 3 |
-| Realistic adherence, 95% CI | 7.9 to 11.6 | 7.9 to 11.7 | Abstract, Sec. 3.3 |
-| Optimistic adherence, 95% CI | 13.9 to 20.3 | 13.8 to 20.5 | Abstract, Sec. 3.3 |
-| Diagnosis sensitivity, 95% CI | 3.6 to 13.8 | **2.5** to 14.1 | Abstract, Sec. 3.3 |
-| Treatment, 95% CI | 7.5 to 10.3 | 7.4 to 10.3 | Abstract, Sec. 3.3 |
-| Optimistic > diagnosis (%) | 98.4 | 98.1 | Table 4 |
-| Realistic > diagnosis (%) | 80.1 | 77.4 | Table 4 |
-| Treatment > diagnosis (%) | 74.7 | 71.4 | Table 4 |
-| Realistic > treatment (%) | 73.6 | 73.9 | Table 4 |
-| Mean months in stage, lower CI (0, B, C, D) | 4.2, 1.4, 1.7, 6.1 | 2.1, 1.1, 2.0, 6.2 | Sec. 3.1, Fig. 2A |
-| Mean months in stage, upper CI (0, B, C, D) | 32.6, 4.9, 4.5, 7.8 | 33.0, 4.8, 4.8, 7.7 | Sec. 3.1, Fig. 2A |
-| Bootstraps with stage A longer than stage 0 (%) | 73 | 70 | Sec. 3.1 |
-| SE of baseline life-years | 5.7 | 6.0 | Sec. 3.4 |
-| Partial correlation, life-years ~ logit(p_0) | -0.87 | +0.29 | Sec. 3.4 |
-| Partial correlation, life-years ~ logit(Sens_0) | 0.92 | -0.02 | Sec. 3.4 |
-| +/-25% sensitivity, L_A upper (years) | 5.7 | 5.6 | Sec. 3.2 |
-
-Unchanged at the paper's printed precision: the scenario point estimates
-(9.8, 17.2, 7.0 and 9.0 life-years per cohort of 100), the other Table 3 intervals and
-the other +/-25% results. `life_add()` moves from 68.023 to 68.034.
-
-**Partial correlations.** The reversal is an artefact of the logit scale: the boundary
-fits (Sens_0 near 1) become extreme outliers on that scale and dominate the partial
-correlations. Rank-based (Spearman) partial correlations are robust to this and agree
-with the published conclusion: life-years ~ p_0 **-0.85**, ~ Sens_0 **+0.90**,
-~ Sens_A **+0.51** (ledger names `pcor_rank_0`, `pcor_rank_US_0`, `pcor_rank_US_A`).
-The logit analysis is kept as the published method.
-
-### B. Errors and inconsistencies in the publication text
-
-The items below are differences between the paper's text and the analysis that
-produced its numbers. Except where marked closed, the code keeps the analysis
-behaviour. Each item is also a comment at the relevant line of code.
-
-| ID | Where | What |
-|----|-------|------|
-| P1 | Supplement p. 6 | The printed Pr(d_alpha) omits the (1 - Sym) factors; the code uses the correct form (0.3289 at the MLE against 52/158 = 0.329 observed). |
-| P2 | Paper Sec. 2.5 | The text gives low / high annual HCC risks of 1.1% / 2.2% (2.2% is also the baseline); the code, and Supplement Sec. 5 ("half and double"), use x0.5 and x2 of p_HCC (1.1% and 4.4%). The Supplement Figs. S6-S7 captions say 1% and 4%. |
-| P3 | Paper Sec. 2.2.2 | "52 of n = 156"; the Supplement (s-bar = 158) and the code use 158. |
-| P4 | Supplement Fig. S3 caption | Says N(mu = 68.0); 68.0 is the point estimate `life_add()`. The fitted normal in the code uses the bootstrap mean (about 67.6 published; 67.5 after G9). |
-| P5 | Supplement Table S2 | Lists 14 states; the code adds a 15th absorbing state `past_A` (progressed past BCLC A undiagnosed). Also, Pr(d_0) uses the t^(100) approximation (error about 1.5e-6) rather than the exact closed form, because it generated the published MLE. **Closed by G8**: the code now uses exact absorption probabilities. See `CHANGES.md`. |
-| P6 | Paper Sec. 2.4, scenario 3 | The text lists L_A +1 year and L_B +6 months only; the code, and the published 9.0 life-years, also add L_C + 0.5. |
-| P7 | Table 3 / `Parameters.csv` | The published MLE is Nelder-Mead's stopping point at its default tolerance, not an exact optimum (NLL 2e-4 above a tight BFGS optimum); negligible next to the bootstrap intervals. **Closed by G9**: `fit_mle()` polishes with a bounded L-BFGS-B, and the whole bootstrap was refitted locally. See `CHANGES.md`. |

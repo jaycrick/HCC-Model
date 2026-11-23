@@ -17,6 +17,23 @@ NLL_PAR_NAMES <- c(STAGE_P_NAMES, "Sens_0", "Sens_A", "Sym_A")
 # Nelder-Mead starting values for the 8 likelihood parameters (NLL_PAR_NAMES).
 NM_START <- c(0.08, 0.06, 0.34, 0.35, 0.16, 0.22, 0.54, 0.01)
 
+# The published MLE (Cumming 2024, Table 3; the POINT column of
+# data/Parameters.csv up to tag v1.1.0, before the G9 refit). Second starting
+# point of the refit's point fit (tools/refit_calibration.R). It is a fixed
+# constant, not read from Parameters.csv, because the refit rewrites that CSV:
+# starting from the CSV made a rerun start from the previous run's output and
+# moved 253 of the 10 000 bootstrap fits by up to 2e-5 (relative).
+PUBLISHED_MLE <- c(
+  p_0 = 0.07982013,
+  p_A = 0.05540597,
+  p_B = 0.34353183,
+  p_C = 0.35197652,
+  p_D = 0.16046211,
+  Sens_0 = 0.20916773,
+  Sens_A = 0.53267066,
+  Sym_A = 0.01015362
+)
+
 #' Observed calibration data, defined once (Cumming et al. 2024, Cancers
 #' 16:2745, and its Supplement, p. 3 and footnote 2).
 #'
@@ -542,7 +559,7 @@ refit_bootstrap <- function(
 #' @param path  Path to the shipped RDS (list of resampled inputs).
 #' @return Long tibble with columns `name` and `value`.
 bootstrap_inputs_long <- function(
-  path = here::here("data-derived", "list_of_resampled_milton_output.rds")
+  path = paper_path("data-derived", "list_of_resampled_milton_output.rds")
 ) {
   nms <- c("m_0", "m_A", "m_B", "m_C", "m_D", "D_0", "D_A", "D_alpha")
   tibble(all = readRDS(path)) |>
@@ -559,7 +576,7 @@ bootstrap_inputs_long <- function(
 #' @param path  Path to the shipped RDS (HPC optimiser output).
 #' @return Tibble with one row per resample, columns `NLL_PAR_NAMES`.
 bootstrap_estimates <- function(
-  path = here::here("data-derived", "miltonoutput.rds")
+  path = paper_path("data-derived", "miltonoutput.rds")
 ) {
   tibble(list_of_pars = readRDS(path)) |>
     unnest_wider(list_of_pars) |>

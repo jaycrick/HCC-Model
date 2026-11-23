@@ -1,5 +1,5 @@
 Type: project
-Title: HCC Surveillance Markov Model (Cumming et al. 2024)
+Title: HCC Surveillance Markov Model
 Imports:
     conflicted,
     corrplot,

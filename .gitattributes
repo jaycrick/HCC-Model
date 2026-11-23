@@ -1,5 +1,18 @@
 # Track large binary intermediates with Git LFS.
 # Requires: git lfs install  (once per machine)
 #           git lfs pull     (after cloning to download the files)
+#
+# Rule: Git LFS holds only files that can be REGENERATED from the repository
+# (see "Regenerating the .rds files" in papers/2024-cancers/README.md).
+# GitHub release downloads (source zip / tar.gz) contain only LFS pointer
+# files, so anything that cannot be regenerated must be a plain git file.
+# Those exceptions are listed below the LFS rules.
 *.rds filter=lfs diff=lfs merge=lfs -text
 *.RData filter=lfs diff=lfs merge=lfs -text
+
+# Irreplaceable inputs (plain git, so every release download contains them):
+#   the original HPC bootstrap resamples and fits (the exact inputs of the HPC
+#   run were not recorded) and the frozen published values.
+papers/2024-cancers/data-derived/list_of_resampled_milton_output.rds -filter -diff -merge binary
+papers/2024-cancers/data-derived/miltonoutput.rds -filter -diff -merge binary
+papers/2024-cancers/data-derived/param_names.rds -filter -diff -merge binary

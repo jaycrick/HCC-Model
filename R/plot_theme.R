@@ -46,7 +46,7 @@ save_figure <- function(
   height,
   formats = FIGURE_FORMATS,
   dpi = 600,
-  dir = here::here("figures")
+  dir = paper_path("figures")
 ) {
   formats <- match.arg(formats, FIGURE_FORMATS, several.ok = TRUE)
   dpis <- if (is.null(names(dpi))) rep(dpi, length(formats)) else dpi[formats]

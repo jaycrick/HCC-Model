@@ -59,6 +59,39 @@
 
     `fit_point_estimate()` spends 90% in hypogeom `cfgeom`/fft via
     `DescTools::dOrder` (external code).
+- S12: per-paper layout and releases (after tag `v1.2.0`).
+  - Tags `v1.0.0-published` (06703e6, the code and data as published),
+    `v1.1.0` (6902e05, refactored, reproduces the publication) and `v1.2.0`
+    (3eab3fd, G8 + G9). The root README has the version table.
+  - Paper 1's files moved to `papers/2024-cancers/` (`analysis/`, `data/`,
+    `data-derived/`, `output/`, `figures/`, `run_all.R`, and a README holding
+    the paper-specific documentation and errata). `R/` is the shared core,
+    which reads and writes paper files only through `paper_path()`, selected
+    by `options(hcc.paper = "<id>")` (default `2024-cancers`).
+    `papers/stochastic/` holds paper 2.
+  - `.gitattributes`: the three files that cannot be regenerated
+    (`list_of_resampled_milton_output.rds`, `miltonoutput.rds`,
+    `param_names.rds`) are now plain git files, so GitHub release downloads
+    contain them; the rest stay in Git LFS. Contents unchanged (same SHA-256).
+  - Numerical effect: none. All tests pass unchanged, and the 58 ledger values
+    written by `run_all.R` are byte-identical to the run before the move.
+- S13: fixed starting point for the refit's point fit.
+  - Problem: `tools/refit_calibration.R` started its point fit from the POINT
+    column of `data/Parameters.csv`, which the same script rewrites. The
+    shipped G9 refit started from the published MLE (the CSV before G9); a
+    rerun started from the refitted CSV (start shifted by about 1e-9). In 253
+    of the 10 000 bootstrap resamples two starts reach optima whose NLL
+    differs by about 1e-11, so the tiny shift changed which start won and moved
+    those fits by up to 2e-5 relative (NLL unchanged to 1.1e-8). Downstream,
+    ledger values moved by up to 2.3e-3 relative (`pcor_logit_US_0`). The
+    refit itself is deterministic: 1 and 9 cores, and repeated runs, give
+    bit-identical results.
+  - Fix: the point fit starts from `NM_START` and the constant
+    `PUBLISHED_MLE` (`R/bootstrap.R`), the published MLE as stored in the CSV
+    up to `v1.1.0`. It is bit-identical to the start the shipped refit used, so
+    the shipped files are unchanged and a rerun now reproduces them.
+  - Tests: `PUBLISHED_MLE` names and rounded values; the point fit from the
+    fixed starts reproduces the CSV to 1e-7.
 
 # Changes that alter model output
 

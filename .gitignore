@@ -1,7 +1,9 @@
 .positai
 
 # Generated figures (reproduced by running the analysis pipeline)
-/figures/
+/papers/*/figures/
+# Generated ledger of manuscript values (written by the analysis scripts)
+/papers/*/output/
 
 # plots.RData saved by 03_progression_model (intermediate, not needed)
 plots.RData

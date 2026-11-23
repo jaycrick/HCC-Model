@@ -1,4 +1,4 @@
-# analysis/02_sensitivity.R
+# papers/2024-cancers/analysis/02_sensitivity.R
 #
 # Univariate sensitivity analyses for the HCC surveillance model.
 # Reads Parameters.csv and Parameters_25.csv from data/.
@@ -15,6 +15,7 @@
 #   sens_anal_25_f4_0_lower.jpg
 
 # ----- Initialise -------------------------------------------------------------
+options(hcc.paper = "2024-cancers") # paths: paper_path() in R/setup.R
 source(here::here("R", "setup.R"))
 source(here::here("R", "model_core.R"))
 source(here::here("R", "plot_theme.R"))
@@ -26,7 +27,7 @@ source(here::here("R", "plot_calibration.R"))
 x_lab_mod <- "Additional Life Years Gained"
 
 # ----- Sensitivity data -------------------------------------------------------
-param_tbl <- life_tibble(here("data", "Parameters.csv"))
+param_tbl <- life_tibble(paper_path("data", "Parameters.csv"))
 
 # ----- Univariate sensitivity tornado -----------------------------------------
 param_tbl |>
@@ -75,7 +76,7 @@ param_tbl |>
   save_figure("sens_anal_f4_0_both", 5.5, 8, "jpg", dpi = 300)
 
 # ----- 25%-variation univariate sensitivity -----------------------------------
-param_tbl_25 <- life_tibble(here("data", "Parameters_25.csv"))
+param_tbl_25 <- life_tibble(paper_path("data", "Parameters_25.csv"))
 param_chang_tbl <- modifiable_sensitivity(param_tbl_25)
 
 # Ledger: change in life-years from a 25% change in each modifiable parameter

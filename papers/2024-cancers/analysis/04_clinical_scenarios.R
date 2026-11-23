@@ -1,4 +1,4 @@
-# analysis/04_clinical_scenarios.R
+# papers/2024-cancers/analysis/04_clinical_scenarios.R
 #
 # Clinical scenario comparisons under baseline, low-risk, and high-risk
 # HCC incidence assumptions.
@@ -14,6 +14,7 @@
 #   scenarios_new_high_risk.{jpg,png,pdf}
 
 # ----- Initialise -------------------------------------------------------------
+options(hcc.paper = "2024-cancers") # paths: paper_path() in R/setup.R
 source(here::here("R", "setup.R"))
 source(here::here("R", "model_core.R"))
 source(here::here("R", "scenarios.R"))
@@ -39,7 +40,7 @@ message("  Baseline  = ", round(Baseline, 5))
 # Scenario definitions: R/scenarios.R. At default parameters Sym_B comes from
 # params_def (as life_add() does), not derived from Sym_A.
 point <- run_scenarios(tibble(.rows = 1), derive_sym_b = FALSE)
-resampled_pars <- readRDS(here("data-derived", "resampled_pars_fin.rds"))
+resampled_pars <- readRDS(paper_path("data-derived", "resampled_pars_fin.rds"))
 
 # ----- All scenarios (absolute life years) ------------------------------------
 plot_scenarios_all(point, resampled_pars) |>

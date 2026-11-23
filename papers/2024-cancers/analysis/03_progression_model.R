@@ -1,4 +1,4 @@
-# analysis/03_progression_model.R
+# papers/2024-cancers/analysis/03_progression_model.R
 #
 # Progression model figures: stage distribution over time, screening
 # frequency effects, and attendance analyses.
@@ -16,6 +16,7 @@
 #   attendance_plot_stages_ribbon_10_year.jpg
 
 # ----- Initialise -------------------------------------------------------------
+options(hcc.paper = "2024-cancers") # paths: paper_path() in R/setup.R
 source(here::here("R", "setup.R"))
 source(here::here("R", "model_core.R"))
 source(here::here("R", "plot_theme.R"))
@@ -25,7 +26,7 @@ source(here::here("R", "plot_calibration.R"))
 
 years <- 10
 months <- years * 12
-resampled_pars <- readRDS(here("data-derived", "resampled_pars_fin.rds"))
+resampled_pars <- readRDS(paper_path("data-derived", "resampled_pars_fin.rds"))
 
 # ----- Untreated stage distribution -------------------------------------------
 # Across a range of annual HCC risk

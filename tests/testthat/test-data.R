@@ -89,7 +89,7 @@ test_that("Parameters_25 POINT == Parameters POINT", {
 })
 
 test_that("Parameters_sources.csv has the same PARAMETERs in order", {
-  src <- read.csv(here::here("data", "Parameters_sources.csv"))
+  src <- read.csv(paper_path("data", "Parameters_sources.csv"))
   expect_identical(
     names(src),
     c("PARAMETER", "SOURCE", "TABLE_REF"),

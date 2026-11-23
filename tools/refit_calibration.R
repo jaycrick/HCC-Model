@@ -265,7 +265,7 @@ run_audit <- function(inputs, hpc, point_par, res, a) {
 main <- function(args = commandArgs(trailingOnly = TRUE)) {
   a <- parse_args(args)
   t0 <- Sys.time()
-  inputs <- readRDS(here::here(
+  inputs <- readRDS(paper_path(
     "data-derived",
     "list_of_resampled_milton_output.rds"
   ))
@@ -274,7 +274,8 @@ main <- function(args = commandArgs(trailingOnly = TRUE)) {
   inputs <- inputs[seq_len(n)]
 
   message("Point fit ...")
-  point <- fit_mle(list(NM_START, unlist(params_def[NLL_PAR_NAMES])))
+  # Fixed starts (not the CSV, which this script rewrites): see PUBLISHED_MLE.
+  point <- fit_mle(list(NM_START, PUBLISHED_MLE))
   print(point[c("par", "value", "convergence", "at_bound")])
   message(
     "Refit of ",
@@ -286,7 +287,7 @@ main <- function(args = commandArgs(trailingOnly = TRUE)) {
     " cores ..."
   )
   ck_dir <- file.path(
-    if (a$dry_run) a$out else here::here("data-derived"),
+    if (a$dry_run) a$out else paper_path("data-derived"),
     "refit_checkpoint"
   )
   tm <- system.time(
@@ -318,8 +319,8 @@ main <- function(args = commandArgs(trailingOnly = TRUE)) {
 }
 
 write_outputs <- function(a, point, pars, diag, audit = NULL) {
-  dd <- if (a$dry_run) a$out else here::here("data-derived")
-  dt <- if (a$dry_run) a$out else here::here("data")
+  dd <- if (a$dry_run) a$out else paper_path("data-derived")
+  dt <- if (a$dry_run) a$out else paper_path("data")
   dir.create(a$out, showWarnings = FALSE, recursive = TRUE)
   saveRDS(pars, file.path(dd, "resampled_pars.rds"))
   saveRDS(
@@ -328,10 +329,10 @@ write_outputs <- function(a, point, pars, diag, audit = NULL) {
   )
   saveRDS(point, file.path(a$out, "point_fit.rds"))
 
-  main_path <- here::here("data", "Parameters.csv")
+  main_path <- paper_path("data", "Parameters.csv")
   new <- main_rows(point$par, pars)
   before_after(read.csv(main_path, row.names = 1), new)
-  path_25 <- here::here("data", "Parameters_25.csv")
+  path_25 <- paper_path("data", "Parameters_25.csv")
   write_lines_keep(
     replace_rows(main_path, new),
     file.path(dt, "Parameters.csv"),

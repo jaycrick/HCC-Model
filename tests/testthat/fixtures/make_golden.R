@@ -31,7 +31,7 @@ golden <- list(
   scen_3 = scen_ly("treat"),
   life_tibble_main = life_tibble(csv_main),
   life_tibble_25 = life_tibble(csv_25),
-  param_names = names(readRDS(here::here("data-derived", "param_names.rds")))
+  param_names = names(readRDS(paper_path("data-derived", "param_names.rds")))
 )
 
 saveRDS(golden, golden_path())

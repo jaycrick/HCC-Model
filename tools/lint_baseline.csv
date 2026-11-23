@@ -1,8 +1,8 @@
 file,count
-analysis/01_bootstrap_params.R,0
-analysis/02_sensitivity.R,0
-analysis/03_progression_model.R,0
-analysis/04_clinical_scenarios.R,0
+papers/2024-cancers/analysis/01_bootstrap_params.R,0
+papers/2024-cancers/analysis/02_sensitivity.R,0
+papers/2024-cancers/analysis/03_progression_model.R,0
+papers/2024-cancers/analysis/04_clinical_scenarios.R,0
 R/bootstrap.R,0
 R/model_core.R,0
 R/plot_calibration.R,0
@@ -12,7 +12,7 @@ R/plot_theme.R,0
 R/scenarios.R,0
 R/setup.R,0
 R/simulation.R,0
-run_all.R,0
+papers/2024-cancers/run_all.R,0
 tests/testthat.R,0
 tests/testthat/fixtures/make_golden.R,0
 tests/testthat/helper-setup.R,0

@@ -143,7 +143,7 @@ test_that("param_names.rds names are stable", {
   # NB: analysis scripts mutate this tracked file; the fixture pins the
   # names as they were when S1 was run (working-tree copy).
   expect_identical(
-    names(readRDS(here::here("data-derived", "param_names.rds"))),
+    names(readRDS(paper_path("data-derived", "param_names.rds"))),
     golden$param_names,
     label = "names(data-derived/param_names.rds)"
   )

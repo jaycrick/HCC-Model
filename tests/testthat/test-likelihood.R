@@ -225,7 +225,7 @@ test_that("polish-only starts are clipped and polished", {
 
 test_that("refit_bootstrap does not depend on cores (2 resamples)", {
   inputs <- readRDS(
-    here::here("data-derived", "list_of_resampled_milton_output.rds")
+    paper_path("data-derived", "list_of_resampled_milton_output.rds")
   )[1:2]
   hpc <- bootstrap_estimates()
   starts_fn <- function(b) list(list(par = unlist(hpc[b, ]), nm = FALSE))
@@ -234,6 +234,24 @@ test_that("refit_bootstrap does not depend on cores (2 resamples)", {
   expect_identical(one, two)
   expect_identical(names(one$pars), NLL_PAR_NAMES)
   expect_identical(nrow(one$diag), 2L)
+})
+
+test_that("PUBLISHED_MLE is the published MLE in NLL_PAR_NAMES order", {
+  expect_identical(names(PUBLISHED_MLE), NLL_PAR_NAMES)
+  # Guards against typos: the values rounded to 2 significant digits
+  expect_equal(
+    unname(signif(PUBLISHED_MLE, 2)),
+    c(0.08, 0.055, 0.34, 0.35, 0.16, 0.21, 0.53, 0.01)
+  )
+})
+
+test_that("the refit's point fit from the fixed starts reproduces the CSV", {
+  fit <- fit_mle(list(NM_START, PUBLISHED_MLE))
+  expect_lt(
+    max(abs(fit$par - csv_par)),
+    1e-7,
+    label = "max |point fit - CSV POINT| (CSV written at 8 significant digits)"
+  )
 })
 
 # Expected to FAIL until the CSV is regenerated from fit_mle (plan step T3).
