@@ -1,0 +1,36 @@
+[project]
+name = "HCC-Model"
+version = "1.3.0"
+type = "project"
+
+[dependencies]
+R = ">= 4.6"
+conflicted = "*"
+expm = "*"
+dplyr = "*"
+tidyr = "*"
+tibble = "*"
+ggplot2 = "*"
+purrr = "*"
+forcats = "*"
+stringr = "*"
+here = "*"
+viridis = "*"
+scales = "*"
+latex2exp = "*"
+DescTools = "*"
+ppcor = "*"
+corrplot = "*"
+cowplot = "*"
+hypogeom = { git = "https://github.com/damian-t-p/hypogeom.git", rev = "2b329c44e6bbefdae5544f61a90c0ea2a87e52eb", ref = "damian-t-p/hypogeom@2b329c44e6bbefdae5544f61a90c0ea2a87e52eb" }
+
+[tool.rig]
+prefer-binary = true
+r-versions = ["4.6"]
+
+[dependency-groups.dev]
+testthat = "*"
+withr = "*"
+rlang = "*"
+lintr = "*"
+codetools = "*"
