@@ -17,11 +17,15 @@ jobs:
     env:
       # rig needs a token to fetch hypogeom from GitHub without rate limits.
       GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
-      RIG_CACHE_DIR: ${{ runner.temp }}/rig-cache
     steps:
       - uses: actions/checkout@v5
         with:
           lfs: true
+
+      # The runner context is not available in job-level env, so set it here.
+      - name: Set rig cache directory
+        shell: bash
+        run: echo "RIG_CACHE_DIR=$RUNNER_TEMP/rig-cache" >> "$GITHUB_ENV"
 
       # rig is installed in user mode (no admin rights), as collaborators do.
       - name: Install rig (Linux)
