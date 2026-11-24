@@ -24,7 +24,7 @@ if (!explicit) {
   )
 }
 files <- unique(sub("^\\./", "", files))
-files <- files[grepl("\\.R$", files) & !grepl("^renv/", files)]
+files <- files[grepl("\\.R$", files)]
 files <- files[file.exists(files)]
 
 read_baseline <- function() {
