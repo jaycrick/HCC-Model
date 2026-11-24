@@ -8,7 +8,13 @@
 # ----- Libraries --------------------------------------------------------------
 library(conflicted) # must load first to intercept ambiguous calls
 library(expm) # matrix exponentiation (%^%)
-library(tidyverse)
+library(dplyr) # data manipulation (filter, mutate, summarise, ...)
+library(tidyr) # pivot_longer
+library(tibble) # tibble, as_tibble
+library(ggplot2) # plotting
+library(purrr) # map, pmap
+library(forcats) # fct_inorder
+library(stringr) # str_to_title
 library(here)
 library(viridis) # turbo palette, scale_fill_viridis
 library(scales)
