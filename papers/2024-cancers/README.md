@@ -118,8 +118,8 @@ working from a clone.
 the first five of the 10,000 resamples exactly and then diverges, because the
 exact probability vector used for the HPC run was not recorded.
 
-From the repository root, with the packages from `renv.lock`
-(`Rscript -e 'renv::restore()'`):
+From the repository root, with the packages from `rproj.lock`
+(`rig proj sync`):
 
 ```bash
 # 1. Calibration refit: point MLE + all 10,000 bootstrap resamples.

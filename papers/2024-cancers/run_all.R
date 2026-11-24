@@ -1,20 +1,20 @@
 # Run all analyses for paper 2024-cancers (file papers/2024-cancers/run_all.R)
 # Master script to reproduce all figures for Cumming et al. 2024 (Cancers).
-# Run from the project root (where MODEL.Rproj lives, so renv activates):
+# Run from the project root (where MODEL.Rproj lives, so .Renviron
+# activates the project library):
 #
-#   Rscript papers/2024-cancers/run_all.R
+#   rig run papers/2024-cancers/run_all.R
 #
 # Prerequisites:
-#   1. R >= 4.2
-#   2. renv::restore()               # restore the package library
-#   3. git lfs pull                  # download the derived .rds files
+#   1. R 4.6 via `rig proj sync`     # installs R and the locked packages
+#   2. git lfs pull                  # download the derived .rds files
 #      (or regenerate them: see "Regenerating the .rds files" in
 #      papers/2024-cancers/README.md)
 #
 # By default, 01_bootstrap_params.R is SKIPPED because its output
 # (data-derived/resampled_pars_fin.rds) is shipped through Git LFS.
 # To regenerate it:
-#   Rscript papers/2024-cancers/run_all.R --bootstrap
+#   rig run papers/2024-cancers/run_all.R --bootstrap
 
 library(here)
 

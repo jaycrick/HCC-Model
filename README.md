@@ -47,27 +47,59 @@ gives the exact commands for each version. Files that cannot be regenerated are
 plain git files, so the downloads contain them. A `git clone` followed by
 `git lfs pull` gets everything.
 
+Tags up to and including `v1.3.0` use renv (`renv::restore()`); `main` uses
+rig (`rig proj sync`).
+
 ---
 
 ## Quick start
 
+Assumes rig and Git LFS are already installed (see [Requirements](#requirements)).
+
 ```bash
 git clone https://github.com/jaycrick/HCC-Model.git && cd HCC-Model
 git lfs pull                                   # download the derived .rds files
-Rscript -e 'renv::restore()'                   # install packages at locked versions
-Rscript papers/2024-cancers/run_all.R          # reproduce paper 1's figures
+rig proj sync                                  # install R 4.6 and the locked packages into .rvenv/
+rig run papers/2024-cancers/run_all.R          # reproduce paper 1's figures
 ```
 
-Run scripts from the repository root, where `.Rprofile` activates renv. Open
-`MODEL.Rproj` in RStudio or Positron to work interactively.
+`rig run`, and any R started in the repository root (including RStudio or
+Positron via `MODEL.Rproj`), uses the project library through `.Renviron`.
+Restart R after `rig proj sync`.
 
 ---
 
 ## Requirements
 
-- **R** ≥ 4.2 (version used: see `renv.lock`)
-- **renv** for reproducible package management
+- **rig** ≥ 0.11.1, which installs and manages R and the packages. You do not
+  need to install R separately.
 - **Git LFS** to download the pre-computed bootstrap data files
+
+### Install rig and R (once per machine)
+
+See [rig's install page](https://rig.r-lib.org/install.html). The user-level
+installers below need no administrator rights; any other method on that page
+(installer, winget, Homebrew, ...) also works, including with admin rights.
+
+```bash
+# macOS / Linux
+curl -LsSf https://r-lib.github.io/rig/install.sh | sh
+```
+
+```powershell
+# Windows (PowerShell); then open a new terminal
+irm https://r-lib.github.io/rig/install.ps1 | iex
+```
+
+Then make R and packages install into your home folder, without admin rights:
+
+```bash
+rig system user-mode
+```
+
+On Windows PowerShell only, also run `rig system fix-r-alias` (otherwise `r`
+means `Invoke-History`), then open a new terminal. Details: the
+[rig user-mode tutorial](https://rig.r-lib.org/tutorial-user.html).
 
 ### Install Git LFS (once per machine)
 
@@ -75,18 +107,20 @@ Run scripts from the repository root, where `.Rprofile` activates renv. Open
 git lfs install
 ```
 
-### Restore the R package library
+### Managing packages
 
-```r
-renv::restore()
-```
-
-This installs all packages at the exact versions recorded in `renv.lock`.
+- `rig proj add <pkg>` adds a package (`--dev` for test and lint tooling
+  only); `rig proj remove <pkg>` removes one. Both update `rproj.toml` and
+  `rproj.lock`.
+- Commit both files. Never commit `.rvenv/`: it is machine-specific and
+  rebuilt by `rig proj sync`.
+- `rig proj lock --upgrade` updates package versions; the golden and ledger
+  tests must still pass afterwards.
 
 > **Note on `hypogeom`:** This package was written specifically for this project by
 > co-author Damian Pavlyshyn and is only available from GitHub
-> (`damian-t-p/hypogeom`). `renv::restore()` will install it automatically. If you
-> need to install it manually: `remotes::install_github("damian-t-p/hypogeom")`.
+> (`damian-t-p/hypogeom`). `rig proj sync` installs it from GitHub at the commit
+> pinned in `rproj.lock`.
 
 ---
 
@@ -218,7 +252,7 @@ After cloning, activate the versioned git hooks and install the [air](https://gi
 git config core.hooksPath .githooks
 
 # Install air (if not already present)
-curl -fsSL https://github.com/posit-dev/air/releases/latest/download/air-installer.sh | sh
+curl -fsSL https://github.com/posit-dev/air/releases/download/0.4.1/air-installer.sh | sh
 ```
 
 ### What the hooks enforce
@@ -266,7 +300,7 @@ The tests fall into four groups:
 
 ### Continuous integration
 
-`.github/workflows/check.yml` runs on every push and pull request (Ubuntu, R version and packages from `renv.lock`).
+`.github/workflows/check.yml` runs on every push and pull request (Ubuntu and Windows, R and packages from `rproj.lock` via rig).
 It runs `air format --check .` (air pinned to the version in the workflow), the lint ratchet, `tools/check_globals.R` and the test suite.
 
 ### Releasing
@@ -274,7 +308,7 @@ It runs `air format --check .` (air pinned to the version in the workflow), the 
 Make a release whenever a paper is submitted, accepted or corrected:
 
 1. Add an entry to `CHANGES.md`. In `CITATION.cff`, set `version` and
-   `date-released`.
+   `date-released`, and bump `version` in `rproj.toml`.
 2. Write release notes in `papers/<id>/releases/<tag>.md`, including how to
    regenerate any `.rds` files that are in Git LFS.
 3. Tag the commit and publish the release:
