@@ -18,4 +18,4 @@ papers/2024-cancers/data-derived/miltonoutput.rds -filter -diff -merge binary
 papers/2024-cancers/data-derived/param_names.rds -filter -diff -merge binary
 
 # rig project shim package: must be plain git, never LFS
-.rvenvlib/** -filter -diff -merge
+.rvenvlib/** !filter !diff !merge
