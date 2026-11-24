@@ -1,5 +1,5 @@
 #!/bin/sh
-# Format staged R files with air and re-stage them, then run the lint ratchet.
+# Format staged R files with air and re-stage them, then lint them.
 
 # Collect staged .R files that are added/modified (not deleted)
 staged=$(git diff --cached --name-only --diff-filter=ACM | grep '\.R$')
@@ -20,17 +20,16 @@ else
   echo "Install air 0.13.0: brew install air (macOS), or see https://posit-dev.github.io/air/" >&2
 fi
 
-# Lint ratchet: staged files may not have more lints than the baseline.
+# Lint: staged files must have zero lints (rules in .lintr).
 if command -v Rscript >/dev/null 2>&1; then
   # shellcheck disable=SC2086
-  if ! Rscript tools/lint_ratchet.R $staged >&2; then
+  if ! Rscript tools/lint.R $staged >&2; then
     echo "" >&2
-    echo "COMMIT BLOCKED: lint ratchet failed (see lints above)." >&2
-    echo "Fix them; lint counts may only go down (tools/lint_baseline.csv)." >&2
+    echo "COMMIT BLOCKED: lints found (see above). Fix them or see .lintr." >&2
     exit 1
   fi
 else
-  echo "WARNING: Rscript not found — skipping lint ratchet." >&2
+  echo "WARNING: Rscript not found — skipping lint." >&2
 fi
 
 # Undefined-name check over the project functions (codetools; see

@@ -149,7 +149,7 @@ git lfs install
 │   │   └── releases/           # Release notes for the v1.x tags
 │   └── stochastic/         # Paper 2 (in preparation)
 ├── tests/testthat/         # Test suite: core invariants and paper 1's published values
-├── tools/                  # refit_calibration.R, lint_ratchet.R, check_globals.R
+├── tools/                  # refit_calibration.R, lint.R, check_globals.R
 ├── CHANGES.md              # Every change that affects results, with before/after values
 └── CITATION.cff            # Machine-readable citation
 ```
@@ -264,7 +264,7 @@ brew install air
 
 | Hook | What it does |
 |------|-------------|
-| `pre-commit` | Runs `air format` on staged `.R` files and re-stages them automatically, then runs the lint ratchet on them and blocks the commit if any file has more lints than its baseline; finally `tools/check_globals.R` (codetools) blocks the commit if any project function uses an undefined name |
+| `pre-commit` | Runs `air format` on staged `.R` files and re-stages them automatically, then lints them and blocks the commit if any has a lint; finally `tools/check_globals.R` (codetools) blocks the commit if any project function uses an undefined name |
 | `commit-msg` | Enforces [git3moji](https://robinpokorny.github.io/git3moji/) prefixes: `:zap:` `:bug:` `:tv:` `:cop:` `:abc:` |
 
 Format any file manually with `air format <file.R>`, or format the whole project with `air format .`.
@@ -276,17 +276,13 @@ Enable the versioned hooks once per clone with `git config core.hooksPath .githo
 `tools/check_globals.R` uses codetools to find any project function that uses an undefined name (a typo or a missing global); the hook and CI both run it.
 
 Lint rules live in `.lintr` (line length 88 to match `air.toml`; `commas_linter` is off because air's aligned `tribble()` tables put spaces before commas, and air already enforces comma spacing everywhere else; `object_usage_linter` is off because it cannot see across the sourced `R/` files, and `tools/check_globals.R` does that job; `object_name_linter` and `indentation_linter` are disabled because the code follows paper notation such as `p_HCC` and air owns formatting).
-The legacy code still has many lints, so instead of a hard zero-lint gate the repository uses a ratchet: `tools/lint_baseline.csv` records each file's allowed lint count, and a file may never exceed it.
-A file not in the baseline must have zero lints.
+Every `.R` file must have zero lints; `tools/lint.R` enforces this in the pre-commit hook and CI.
+To exempt a line use a `# nolint` comment; to exempt a whole file add it to `exclusions:` in `.lintr`.
 
 ```bash
-Rscript tools/lint_ratchet.R [files...]   # check (default: all project .R files)
-Rscript tools/lint_ratchet.R --update     # lower the baseline after fixing lints
-Rscript tools/check_globals.R             # undefined names
+Rscript tools/lint.R [files...]    # lint (default: all project .R files)
+Rscript tools/check_globals.R      # undefined names
 ```
-
-`--update` refuses to raise any count, so the baseline can only go down.
-The target is an empty baseline (all counts 0).
 
 ### Tests
 
@@ -306,7 +302,7 @@ The tests fall into four groups:
 ### Continuous integration
 
 `.github/workflows/check.yml` runs on every push and pull request (Ubuntu and Windows, R and packages from `rproj.lock` via rig).
-It runs `air format --check .` (air pinned to the version in the workflow), the lint ratchet, `tools/check_globals.R` and the test suite.
+It runs `air format --check .` (air pinned to the version in the workflow), `tools/lint.R`, `tools/check_globals.R` and the test suite.
 
 ### Releasing
 

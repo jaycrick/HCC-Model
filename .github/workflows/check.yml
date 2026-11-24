@@ -72,9 +72,9 @@ jobs:
         if: runner.os == 'Linux'
         run: air format --check .
 
-      - name: Lint ratchet
+      - name: Lint
         shell: bash
-        run: rig run tools/lint_ratchet.R
+        run: rig run tools/lint.R
 
       - name: Undefined names
         shell: bash
