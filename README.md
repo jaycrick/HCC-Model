@@ -269,11 +269,11 @@ Format any file manually with `air format <file.R>`, or format the whole project
 
 ### Lint and format
 
-Formatting is owned by [air](https://github.com/posit-dev/air) (`air.toml`, line width 80): `air format .` formats, `air format --check .` checks.
+Formatting is owned by [air](https://github.com/posit-dev/air) (`air.toml`): line width 88, LF line endings, and `persistent-line-breaks = false`, so any call that fits on one line is collapsed onto it however it was written. `tribble()` calls are aligned as tables (`default-table = true`); write one row per line and air pads the columns. `air format .` formats, `air format --check .` checks.
 Enable the versioned hooks once per clone with `git config core.hooksPath .githooks`.
 `tools/check_globals.R` uses codetools to find any project function that uses an undefined name (a typo or a missing global); the hook and CI both run it.
 
-Lint rules live in `.lintr` (line length 80 to match `air.toml`; `object_usage_linter` is off because it cannot see across the sourced `R/` files, and `tools/check_globals.R` does that job; `object_name_linter` and `indentation_linter` are disabled because the code follows paper notation such as `p_HCC` and air owns formatting).
+Lint rules live in `.lintr` (line length 88 to match `air.toml`; `commas_linter` is off because air's aligned `tribble()` tables put spaces before commas, and air already enforces comma spacing everywhere else; `object_usage_linter` is off because it cannot see across the sourced `R/` files, and `tools/check_globals.R` does that job; `object_name_linter` and `indentation_linter` are disabled because the code follows paper notation such as `p_HCC` and air owns formatting).
 The legacy code still has many lints, so instead of a hard zero-lint gate the repository uses a ratchet: `tools/lint_baseline.csv` records each file's allowed lint count, and a file may never exceed it.
 A file not in the baseline must have zero lints.
 

@@ -52,11 +52,7 @@ scenario_defs <- list(
     # Ref: Cumming 2024, Sec. 2.4, scenario 2 (+5 points for stages 0, A, B)
     modify_params(
       p,
-      list(
-        Sens_0 = p$Sens_0 + 0.05,
-        Sens_A = p$Sens_A + 0.05,
-        Sens_B = p$Sens_B + 0.05
-      )
+      list(Sens_0 = p$Sens_0 + 0.05, Sens_A = p$Sens_A + 0.05, Sens_B = p$Sens_B + 0.05)
     )
   },
   treat = function(p) {
@@ -92,30 +88,12 @@ risk_multipliers <- c(base = 1, low_risk = 0.5, high_risk = 2)
 #' - ledger_key: prefix of the entries in output/manuscript_values.csv
 #'               (NA for the baseline, which has no improvement to report)
 scenario_table <- tibble::tribble(
-  ~id,
-  ~column,
-  ~label,
-  ~ledger_key,
-  "baseline",
-  "Baseline",
-  "Current Scenario",
-  NA,
-  "real_adh",
-  "scen_1a",
-  "Realistic Adherence\nImprovements",
-  "real_adh",
-  "opt_adh",
-  "scen_1b",
-  "Optimistic Adherence\nImprovements",
-  "opt_adh",
-  "diag_sens",
-  "scen_2",
-  "Diagnosis Sensitivity\nImprovements",
-  "diag_scen",
-  "treat",
-  "scen_3",
-  "Treatment Improvements",
-  "treat_scens"
+  ~id         , ~column    , ~label                                , ~ledger_key   ,
+  "baseline"  , "Baseline" , "Current Scenario"                    , NA            ,
+  "real_adh"  , "scen_1a"  , "Realistic Adherence\nImprovements"   , "real_adh"    ,
+  "opt_adh"   , "scen_1b"  , "Optimistic Adherence\nImprovements"  , "opt_adh"     ,
+  "diag_sens" , "scen_2"   , "Diagnosis Sensitivity\nImprovements" , "diag_scen"   ,
+  "treat"     , "scen_3"   , "Treatment Improvements"              , "treat_scens"
 )
 
 #' Legacy cross differences between two improvement scenarios, `a - b`.
@@ -126,21 +104,11 @@ scenario_table <- tibble::tribble(
 #'
 #' @format A tibble with columns column, a, b.
 cross_diff_table <- tibble::tribble(
-  ~column,
-  ~a,
-  ~b,
-  "scen_1a_3",
-  "real_adh",
-  "diag_sens",
-  "scen_1a_4",
-  "real_adh",
-  "treat",
-  "scen_1b_3",
-  "opt_adh",
-  "diag_sens",
-  "scen_1b_4",
-  "opt_adh",
-  "treat"
+  ~column     , ~a         , ~b          ,
+  "scen_1a_3" , "real_adh" , "diag_sens" ,
+  "scen_1a_4" , "real_adh" , "treat"     ,
+  "scen_1b_3" , "opt_adh"  , "diag_sens" ,
+  "scen_1b_4" , "opt_adh"  , "treat"
 )
 
 # The table and the definitions must list the same scenarios in the same order.
@@ -243,10 +211,7 @@ scenario_columns <- function(long) {
     unlist(lapply(risks, by_scenario, "ly", scenario_table$id), FALSE),
     by_scenario("base", "diff", improvements),
     setNames(cross, cross_diff_table$column),
-    unlist(
-      lapply(setdiff(risks, "base"), by_scenario, "diff", improvements),
-      FALSE
-    )
+    unlist(lapply(setdiff(risks, "base"), by_scenario, "diff", improvements), FALSE)
   )
   tibble::as_tibble(cols)
 }

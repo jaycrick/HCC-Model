@@ -1,5 +1,9 @@
 [format]
-line-width = 80
+line-width = 88
 indent-width = 2
-# aligned tribble tables conflict with lintr's commas_linter
-default-table = false
+indent-style = "space"
+line-ending = "lf"
+# collapse calls that fit on one line, regardless of how they were written
+persistent-line-breaks = false
+# align tribble() columns; lintr's commas_linter is disabled to match
+default-table = true
