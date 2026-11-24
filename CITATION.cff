@@ -2,7 +2,7 @@ cff-version: 1.2.0
 message: "If you use this software, please cite the associated article below. To identify the exact version of the code, also give the release tag (see the version table in README.md)."
 type: software
 title: "HCC Surveillance Markov Model"
-version: "1.2.0"
+version: "1.3.0"
 abstract: >
   R code implementing a Markov model for hepatocellular carcinoma (HCC)
   surveillance in patients with cirrhosis after hepatitis C cure. Models
@@ -34,7 +34,7 @@ authors:
     given-names: Joseph S.
   - family-names: Sacks-Davis
     given-names: Rachel
-date-released: "2026-11-20"
+date-released: "2026-11-24"
 license: MIT
 repository-code: "https://github.com/jaycrick/HCC-Model"
 doi: 10.3390/cancers16152745

@@ -37,7 +37,8 @@ paper's DOI identifies the paper, not a version of the code.
 | Cumming et al. 2024, *Cancers* | [10.3390/cancers16152745](https://doi.org/10.3390/cancers16152745) | [`v1.0.0-published`](https://github.com/jaycrick/HCC-Model/tree/v1.0.0-published) | **Yes**: the original scripts and data, as used for the paper |
 | Cumming et al. 2024, *Cancers* | [10.3390/cancers16152745](https://doi.org/10.3390/cancers16152745) | [`v1.1.0`](https://github.com/jaycrick/HCC-Model/tree/v1.1.0) | **Yes**: refactored and tested code; reproduces the published numbers |
 | Cumming et al. 2024, *Cancers* | [10.3390/cancers16152745](https://doi.org/10.3390/cancers16152745) | [`v1.2.0`](https://github.com/jaycrick/HCC-Model/tree/v1.2.0) | **No**: corrected calibration (G8, G9); point estimates match, some intervals do not ([errata](papers/2024-cancers/README.md#errata-and-differences-from-the-publication)) |
-| *(development)* | n/a | `main` | Same results as `v1.2.0`, with the per-paper layout |
+| Cumming et al. 2024, *Cancers* | [10.3390/cancers16152745](https://doi.org/10.3390/cancers16152745) | [`v1.3.0`](https://github.com/jaycrick/HCC-Model/tree/v1.3.0) | **No**: same results as `v1.2.0`; per-paper layout, irreplaceable data in plain git (in the download) |
+| *(development)* | n/a | `main` | Same results as `v1.3.0` |
 
 A release's source download (zip or tar.gz) does **not** contain the `.rds`
 files that can be regenerated from the code: in their place it has Git LFS
