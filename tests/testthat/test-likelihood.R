@@ -111,11 +111,9 @@ test_that("t(0) %*% T^100 converges to the closed form Pr(d0) (Supp. fn 3)", {
   expect_equal(sum(t0), 1, tolerance = 1e-12, label = "t(0) sums to 1")
   approx_d0 <- (t0 %*% (tm %^% 100))[1]
   closed <- s0 * (1 - (1 - p0)^6) / (6 * p0 * (1 - (1 - s0) * (1 - p0)^6))
-  expect_equal(
-    approx_d0,
-    closed,
-    tolerance = 1e-5,
-    scale = 1,
+  expect_lte(
+    abs(approx_d0 - closed),
+    1e-5,
     label = paste(
       "t(0) %*% T^100 [1] == closed-form Pr(d0), abs tol 1e-5",
       "(Supp. footnote 3)"
@@ -131,18 +129,14 @@ test_that("end_state_probs: exact vs closed form, T^100, T^1000 (fn 3, G8)", {
   d0_100 <- end_state_probs(tm, s0, t = 100)[["dx_0"]]
   d0_1000 <- end_state_probs(tm, s0, t = 1000)[["dx_0"]]
   closed <- s0 * (1 - (1 - p0)^6) / (6 * p0 * (1 - (1 - s0) * (1 - p0)^6))
-  expect_equal(
-    exact[["dx_0"]],
-    closed,
-    tolerance = 1e-12,
-    scale = 1,
+  expect_lte(
+    abs(exact[["dx_0"]] - closed),
+    1e-12,
     label = "exact Pr(d0) == closed form"
   )
-  expect_equal(
-    exact[["dx_0"]],
-    d0_1000,
-    tolerance = 1e-9,
-    scale = 1,
+  expect_lte(
+    abs(exact[["dx_0"]] - d0_1000),
+    1e-9,
     label = "exact Pr(d0) == T^1000"
   )
   expect_equal(

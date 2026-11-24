@@ -445,7 +445,10 @@ life_tibble <- function(csv) {
     mutate(
       dfs_new = pmap(param_tidy, dfs),
       Bound = as.factor(str_to_title(Bound)),
-      Parameter = as.factor(Parameter),
+      Parameter = factor(
+        Parameter,
+        levels = str_sort(unique(Parameter), locale = "en")
+      ),
       dfs_low = map(
         dfs_new,
         ~ if (names(.x) == "p_HCC") .x else tibble(.x, p_HCC = lower$p_HCC)

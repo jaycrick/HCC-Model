@@ -24,3 +24,6 @@ RVENV_R_LIBS_USER="${R_LIBS_USER}"
 R_LIBS_USER=.rvenvlib
 R_DEFAULT_PACKAGES=rvenv,datasets,utils,grDevices,graphics,stats,methods
 # rig rvenv end
+
+# testthat edition 3 (no DESCRIPTION to set Config/testthat/edition)
+TESTTHAT_EDITION=3

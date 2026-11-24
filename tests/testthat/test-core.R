@@ -150,3 +150,7 @@ test_that("progress_untreated() matches screen_cohort() w/o detection (G1)", {
     )
   }
 })
+
+test_that("testthat edition 3 is active", {
+  expect_equal(testthat::edition_get(), 3L)
+})
