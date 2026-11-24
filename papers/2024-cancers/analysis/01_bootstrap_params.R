@@ -76,10 +76,7 @@ resampled_pars <- bind_cols(
   resampled_pars,
   scenario_columns(run_scenarios(resampled_pars))
 )
-saveRDS(
-  resampled_pars,
-  file = paper_path("data-derived", "resampled_pars_fin.rds")
-)
+saveRDS(resampled_pars, file = paper_path("data-derived", "resampled_pars_fin.rds"))
 resampled_pars <- readRDS(paper_path("data-derived", "resampled_pars_fin.rds"))
 
 # ===== 2. SUMMARISE =====
@@ -117,10 +114,7 @@ record_values(c(
 # Sens_0 upper bound (logit about 13), so the logit pcor is dominated by those
 # outliers. Ranks are invariant to the logit, so the raw parameters are used.
 pcor_rank <- ppcor::pcor(pars_wide, method = "spearman")$estimate
-fit_diag <- readRDS(paper_path(
-  "data-derived",
-  "bootstrap_fit_diagnostics.rds"
-))$diag
+fit_diag <- readRDS(paper_path("data-derived", "bootstrap_fit_diagnostics.rds"))$diag
 record_values(c(
   pcor_rank_0 = unname(pcor_rank["Baseline", "p_0"]),
   pcor_rank_US_0 = unname(pcor_rank["Baseline", "Sens_0"]),
@@ -209,14 +203,7 @@ US_sensitivity_Cal <- plot_sensitivity_hex(resampled_pars, point_par)
 save_all(US_sensitivity_Cal, "US_sensitivity_Cal", 6, 3.5)
 save_all(plot_baseline_hist(resampled_pars), "bootstrap_var_base", 6, 3)
 
-save_figure(
-  plot_pcor_heatmap(pcor_logit),
-  "plot_par_cor_logit",
-  6,
-  5,
-  "jpg",
-  dpi = 300
-)
+save_figure(plot_pcor_heatmap(pcor_logit), "plot_par_cor_logit", 6, 5, "jpg", dpi = 300)
 plot_cor_base_logit <- plot_pcor_baseline(pcor_logit)
 save_all(plot_cor_base_logit, "plot_cor_base_logit", 6, 3)
 
@@ -229,8 +216,7 @@ plot_univar_mod <- plot_tornado(
   facet = "group"
 )
 multipanel_cals <- cowplot::plot_grid(
-  HCC_Time_Range_Plot +
-    theme(axis.text.x = element_text(angle = 60, hjust = 1)),
+  HCC_Time_Range_Plot + theme(axis.text.x = element_text(angle = 60, hjust = 1)),
   US_sensitivity_Cal + theme(legend.position = "bottom"),
   plot_cor_base_logit +
     theme(

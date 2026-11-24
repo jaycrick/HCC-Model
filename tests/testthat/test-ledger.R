@@ -8,11 +8,7 @@ test_that("record_values round-trips exactly", {
   v <- c(a = 1 / 3, b = pi * 1e-9, c = 123456789.123456789, d = 0)
   record_values(v, path = path)
   txt <- read.csv(path, colClasses = "character")
-  expect_identical(
-    txt$name,
-    sort(names(v), method = "radix"),
-    label = "ledger names"
-  )
+  expect_identical(txt$name, sort(names(v), method = "radix"), label = "ledger names")
   # The text is exact: it is a correctly rounded decimal of each double that
   # (at 17 significant digits) identifies it uniquely. R's own parser is not
   # always correctly rounded (it can be 1 ulp off), so reading back is checked
@@ -64,16 +60,11 @@ test_that("record_values overwrites a repeated name and keeps the rest", {
 test_that("record_values rejects unnamed or duplicated values", {
   path <- file.path(withr::local_tempdir(), "ledger.csv")
   expect_error(record_values(c(1, 2), path = path), label = "unnamed values")
-  expect_error(
-    record_values(c(a = 1, a = 2), path = path),
-    label = "duplicated names"
-  )
+  expect_error(record_values(c(a = 1, a = 2), path = path), label = "duplicated names")
 })
 
 # ----- Baseline comparison ----------------------------------------------------
-baseline <- readRDS(
-  here::here("tests", "testthat", "fixtures", "ledger_baseline.rds")
-)
+baseline <- readRDS(here::here("tests", "testthat", "fixtures", "ledger_baseline.rds"))
 
 test_that("the frozen published reference param_names.rds is unchanged", {
   frozen <- readRDS(paper_path("data-derived", "param_names.rds"))
@@ -132,11 +123,7 @@ test_that("04 scenario ledger values equal the baseline", {
     record_values(
       setNames(
         c(d$points[[2]], d$points$lowCI, d$points$highCI),
-        c(
-          paste0(key, sfx),
-          paste0(key, "_lower", sfx),
-          paste0(key, "_upper", sfx)
-        )
+        c(paste0(key, sfx), paste0(key, "_lower", sfx), paste0(key, "_upper", sfx))
       ),
       path = path
     )

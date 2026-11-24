@@ -32,11 +32,7 @@ plot_bootstrap_counts <- function(long) {
 }
 
 #' Box plot or violin plot of the bootstrap rates, red dot = point estimate.
-plot_rates_distribution <- function(
-  pars,
-  rates_tbl,
-  type = c("box", "violin")
-) {
+plot_rates_distribution <- function(pars, rates_tbl, type = c("box", "violin")) {
   type <- match.arg(type)
   geom <- if (type == "box") {
     geom_boxplot(outlier.shape = 1, outlier.alpha = 0.2)
@@ -104,12 +100,7 @@ plot_time_range <- function(pars, rates_tbl) {
       data = rates_tbl,
       inherit.aes = FALSE
     ) +
-    scale_x_discrete(
-      labels = setNames(
-        paste("BCLC Stage", STAGE_IDS),
-        STAGE_P_NAMES
-      )
-    ) +
+    scale_x_discrete(labels = setNames(paste("BCLC Stage", STAGE_IDS), STAGE_P_NAMES)) +
     labs(x = NULL, y = "Mean Number of\nYears In BCLC Stage") +
     theme_hcc() +
     scale_y_continuous(limits = c(0, 3), expand = expansion(0))
@@ -132,11 +123,7 @@ plot_sensitivity_hex <- function(pars, point) {
     ) +
     geom_hex(alpha = 0.75, bins = c(100, 80)) +
     theme_hcc(legend_title_centre = TRUE) +
-    scale_fill_viridis(
-      option = "C",
-      trans = "log",
-      breaks = c(1, 2, 5, 10, 20, 35)
-    ) +
+    scale_fill_viridis(option = "C", trans = "log", breaks = c(1, 2, 5, 10, 20, 35)) +
     pct +
     scale_y_continuous(
       labels = label_percent(),

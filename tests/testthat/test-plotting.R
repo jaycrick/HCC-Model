@@ -63,10 +63,7 @@ test_that("G5b: facet and variable labels are derived from the lookup", {
     variable_labels,
     setNames(param_lookup$label, param_lookup$parameter)
   )
-  expect_identical(
-    facet_labels[names(group_labels)],
-    group_labels
-  )
+  expect_identical(facet_labels[names(group_labels)], group_labels)
   # the Adherence facet exists and the old, never-occurring "Pr" one is gone
   expect_true("Adherence" %in% names(facet_labels))
   expect_false("Pr" %in% names(facet_labels))
@@ -184,21 +181,10 @@ test_that("G4: stage-diagnosis sweep uses Sym_B and gives IQR", {
     1:5,
     function(i) {
       p <- as.list(draws(boot5)[i, ])
-      unlist(
-        do.call(
-          screen_by_adherence,
-          c(
-            p,
-            list(
-              Sym_B = 8 * boot5$Sym_A[i],
-              p_Att = 1,
-              p_NA = 0,
-              p_CA = 0,
-              t = 60
-            )
-          )
-        )[["BCLC A"]]
-      )
+      unlist(do.call(
+        screen_by_adherence,
+        c(p, list(Sym_B = 8 * boot5$Sym_A[i], p_Att = 1, p_NA = 0, p_CA = 0, t = 60))
+      )[["BCLC A"]])
     },
     1
   )
@@ -216,11 +202,7 @@ test_that("G4: stage-diagnosis sweep uses Sym_B and gives IQR", {
 
 test_that("G4: run_scenarios shares prepare_draws (Sym_B derived per draw)", {
   one <- run_scenarios(boot5[1, ], risk = risk_multipliers["base"])
-  expect_equal(
-    one$ly[one$scenario == "baseline"],
-    explicit_ly(1),
-    tolerance = 1e-12
-  )
+  expect_equal(one$ly[one$scenario == "baseline"], explicit_ly(1), tolerance = 1e-12)
 })
 
 # ----- G5(a) (finding C8): honest band labels ---------------------------------
@@ -242,10 +224,7 @@ test_that("G5a: the stage ribbon plot names the IQR", {
   sw <- sweep_stage_diagnoses(c(0, 1), "p_Att", boot5, t = 24)
   p <- plot_stage_diagnoses(sw, "title", "caption", ribbon = TRUE)
   expect_match(p$labels$caption, "IQR")
-  expect_no_match(
-    plot_stage_diagnoses(sw, "t", "caption")$labels$caption,
-    "IQR"
-  )
+  expect_no_match(plot_stage_diagnoses(sw, "t", "caption")$labels$caption, "IQR")
 })
 
 # ----- save_figure, themes and the remaining helpers --------------------------
@@ -266,11 +245,7 @@ test_that("save_figure writes exactly the requested formats at the given dpi", {
   expect_identical(basename(paths), c("fig.jpg", "fig.png"))
   # PNG header: width and height are big-endian integers at bytes 17-24
   hdr <- readBin(file.path(dir, "fig.png"), "raw", 24)
-  dims <- vapply(
-    list(17:20, 21:24),
-    function(b) sum(as.integer(hdr[b]) * 256^(3:0)),
-    1
-  )
+  dims <- vapply(list(17:20, 21:24), function(b) sum(as.integer(hdr[b]) * 256^(3:0)), 1)
   expect_identical(dims, c(400, 200)) # 2 x 1 inches at 200 dpi
 })
 
@@ -288,10 +263,7 @@ test_that("save_figure defaults to jpg+png+pdf at 600 dpi and checks inputs", {
 
 test_that("dfs() builds the one-row tibble pivot_wider used to build", {
   expect_identical(dfs("p_A", 0.1), tibble::tibble(p_A = 0.1))
-  expect_identical(
-    dfs("p_A", 0.1, Bound = "LOWER"),
-    tibble::tibble(p_A = 0.1)
-  )
+  expect_identical(dfs("p_A", 0.1, Bound = "LOWER"), tibble::tibble(p_A = 0.1))
 })
 
 test_that("summarise_ci returns the 2.5% and 97.5% quantiles", {
@@ -323,9 +295,7 @@ test_that("stage distributions are progress_untreated() rows", {
 })
 
 test_that("response curves are life_add at shifted parameters", {
-  cv <- response_curves(list(
-    list(name = "NA", param = "p_NA", max = 2, sign = -1)
-  ))
+  cv <- response_curves(list(list(name = "NA", param = "p_NA", max = 2, sign = -1)))
   expect_identical(cv$x, c(0, 0.01, 0.02))
   expect_identical(cv$value[3], life_add(p_NA = params_def$p_NA - 0.02))
 })

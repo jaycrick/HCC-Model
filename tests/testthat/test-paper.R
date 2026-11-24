@@ -36,12 +36,7 @@ test_that("Abstract / Sec 3.3 scenario point estimates", {
     )
   ) -
     base_la
-  paper <- c(
-    realistic = 9.8,
-    optimistic = 17.2,
-    diagnosis = 7.0,
-    treatment = 9.0
-  )
+  paper <- c(realistic = 9.8, optimistic = 17.2, diagnosis = 7.0, treatment = 9.0)
   for (nm in names(paper)) {
     expect_equal(
       round(pts[[nm]], 1),
@@ -67,12 +62,7 @@ test_that("Abstract / Sec 3.3 scenario 95% CIs", {
   lo <- c(realistic = 7.9, optimistic = 13.8, diagnosis = 2.5, treatment = 7.4)
   # published upper: realistic 11.6, optimistic 20.3, diagnosis 13.8
   # (Cumming 2024, Abstract / Sec 3.3); G9 refit -> 11.7, 20.5, 14.1
-  hi <- c(
-    realistic = 11.7,
-    optimistic = 20.5,
-    diagnosis = 14.1,
-    treatment = 10.3
-  )
+  hi <- c(realistic = 11.7, optimistic = 20.5, diagnosis = 14.1, treatment = 10.3)
   for (nm in names(cols)) {
     expect_equal(
       round(q(rp[[cols[[nm]]]], 0.025), 1),
@@ -161,10 +151,7 @@ test_that("Sec 3.4: SE of Baseline and partial correlations", {
     6.0, # published 5.7 (Cumming 2024, Sec 3.4); G9 refit -> 6.0
     label = "Sec 3.4: SE of Baseline = sd(Baseline)"
   )
-  lg <- as.data.frame(lapply(
-    rp[NLL_PAR_NAMES],
-    qlogis
-  ))
+  lg <- as.data.frame(lapply(rp[NLL_PAR_NAMES], qlogis))
   lg$Baseline <- rp$Baseline
   pc <- ppcor::pcor(lg)$estimate
   expect_equal(

@@ -65,10 +65,7 @@ parse_args <- function(args) {
   }
   list(
     n = as.integer(get("--n", NA)),
-    cores = fork_cores(get(
-      "--cores",
-      max(1L, parallel::detectCores() - 1L)
-    )),
+    cores = fork_cores(get("--cores", max(1L, parallel::detectCores() - 1L))),
     config = get("--config", "d"),
     audit = as.integer(get("--audit", 200L)),
     dry_run = "--dry-run" %in% args,
@@ -265,10 +262,7 @@ run_audit <- function(inputs, hpc, point_par, res, a) {
 main <- function(args = commandArgs(trailingOnly = TRUE)) {
   a <- parse_args(args)
   t0 <- Sys.time()
-  inputs <- readRDS(paper_path(
-    "data-derived",
-    "list_of_resampled_milton_output.rds"
-  ))
+  inputs <- readRDS(paper_path("data-derived", "list_of_resampled_milton_output.rds"))
   hpc <- bootstrap_estimates()
   n <- if (is.na(a$n)) length(inputs) else a$n
   inputs <- inputs[seq_len(n)]
@@ -277,15 +271,7 @@ main <- function(args = commandArgs(trailingOnly = TRUE)) {
   # Fixed starts (not the CSV, which this script rewrites): see PUBLISHED_MLE.
   point <- fit_mle(list(NM_START, PUBLISHED_MLE))
   print(point[c("par", "value", "convergence", "at_bound")])
-  message(
-    "Refit of ",
-    n,
-    " resamples, config ",
-    a$config,
-    ", ",
-    a$cores,
-    " cores ..."
-  )
+  message("Refit of ", n, " resamples, config ", a$config, ", ", a$cores, " cores ...")
   ck_dir <- file.path(
     if (a$dry_run) a$out else paper_path("data-derived"),
     "refit_checkpoint"

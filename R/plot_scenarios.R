@@ -157,9 +157,7 @@ plot_scenario_violins <- function(d, xlab, ymax) {
   ggplot(d$violin, aes(.data[["Scenario"]], .data[[y]])) +
     geom_violin(trim = TRUE) +
     theme_hcc() +
-    scale_x_discrete(
-      limits = scenario_table$label[scenario_table$id != "baseline"]
-    ) +
+    scale_x_discrete(limits = scenario_table$label[scenario_table$id != "baseline"]) +
     labs(x = xlab) +
     theme(
       legend.position = "right",
@@ -199,10 +197,7 @@ plot_scenarios_all <- function(point, boot) {
   names(violin)[2] <- y
   ggplot(bars, aes(forcats::fct_inorder(.data[["Scenario"]]), .data[[y]])) +
     geom_col() +
-    geom_violin(
-      data = violin,
-      mapping = aes(.data[["Scenario"]], .data[[y]])
-    ) +
+    geom_violin(data = violin, mapping = aes(.data[["Scenario"]], .data[[y]])) +
     theme_hcc() +
     labs(x = "Scenario") +
     theme(legend.position = "none")
@@ -243,10 +238,7 @@ response_curves <- function(specs) {
 #' @param group_lab  Legend title.
 #' @return A ggplot.
 plot_response_curves <- function(curves, title, x_lab, group_lab) {
-  ggplot(
-    curves,
-    aes(.data$x, .data$value, colour = .data$group)
-  ) +
+  ggplot(curves, aes(.data$x, .data$value, colour = .data$group)) +
     geom_line(linewidth = 1.5) +
     ggtitle(title) +
     scale_x_continuous(labels = label_percent(), expand = expansion(0)) +

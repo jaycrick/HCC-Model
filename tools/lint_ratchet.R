@@ -51,18 +51,12 @@ if (update) {
   for (f in files) {
     if (f %in% names(baseline)) {
       if (counts[[f]] > baseline[[f]]) {
-        raised <- c(
-          raised,
-          sprintf("%s: %d > %d", f, counts[[f]], baseline[[f]])
-        )
+        raised <- c(raised, sprintf("%s: %d > %d", f, counts[[f]], baseline[[f]]))
       } else {
         new[[f]] <- counts[[f]]
       }
     } else if (counts[[f]] > 0 && !initial) {
-      raised <- c(
-        raised,
-        sprintf("%s: new file with %d lint(s)", f, counts[[f]])
-      )
+      raised <- c(raised, sprintf("%s: new file with %d lint(s)", f, counts[[f]]))
     } else {
       # Zero-count entries may be added; the very first run seeds any count.
       new[[f]] <- counts[[f]]
@@ -80,11 +74,7 @@ if (update) {
     row.names = FALSE,
     quote = FALSE
   )
-  cat(sprintf(
-    "Baseline written: %d files, %d lints total.\n",
-    length(new),
-    sum(new)
-  ))
+  cat(sprintf("Baseline written: %d files, %d lints total.\n", length(new), sum(new)))
   quit(status = 0)
 }
 
@@ -93,12 +83,7 @@ for (f in files) {
   allowed <- if (f %in% names(baseline)) baseline[[f]] else 0L
   if (counts[[f]] > allowed) {
     failed <- TRUE
-    cat(sprintf(
-      "\n%s: %d lint(s), baseline allows %d\n",
-      f,
-      counts[[f]],
-      allowed
-    ))
+    cat(sprintf("\n%s: %d lint(s), baseline allows %d\n", f, counts[[f]], allowed))
     print(lints[[f]])
   }
 }

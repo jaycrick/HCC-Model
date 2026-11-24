@@ -101,11 +101,7 @@ test_that("transition_matrix() is a named 7x7 row-stochastic matrix", {
 test_that("screen_cohort() exposes the undiagnosed state (mass conservation)", {
   for (pa in c(0, 0.449, 1)) {
     res <- screen_cohort(Pr_Att = pa, n = 100, t = 120, m = 6)
-    expect_identical(
-      names(res$dx),
-      stage_list,
-      label = "dx named by stage_list"
-    )
+    expect_identical(names(res$dx), stage_list, label = "dx named by stage_list")
     expect_identical(
       names(res$undiagnosed),
       stage_list,
@@ -115,11 +111,7 @@ test_that("screen_cohort() exposes the undiagnosed state (mass conservation)", {
       sum(res$dx) + sum(res$undiagnosed),
       100,
       tolerance = 1e-12,
-      label = paste0(
-        "sum(Dx) + remaining == n at t = 120 (Pr_Att = ",
-        pa,
-        ")"
-      )
+      label = paste0("sum(Dx) + remaining == n at t = 120 (Pr_Att = ", pa, ")")
     )
   }
 })
@@ -129,15 +121,9 @@ test_that("progress_untreated() matches screen_cohort() w/o detection (G1)", {
   # death, so the undiagnosed states plus the deaths counted in dx must equal
   # the plain Markov progression. This FAILS while progress_untreated applies
   # a second annual->monthly conversion to the monthly p_0..p_D (C1).
-  no_sym <- as.list(setNames(
-    rep(0, 5),
-    STAGE_SYM_NAMES
-  ))
+  no_sym <- as.list(setNames(rep(0, 5), STAGE_SYM_NAMES))
   for (tt in c(12, 120)) {
-    sc <- do.call(
-      screen_cohort,
-      c(list(Pr_Att = 0, n = 100, t = tt, m = 6), no_sym)
-    )
+    sc <- do.call(screen_cohort, c(list(Pr_Att = 0, n = 100, t = tt, m = 6), no_sym))
     expect_equal(
       unlist(progress_untreated(n = 100, t = tt)),
       sc$undiagnosed + sc$dx,

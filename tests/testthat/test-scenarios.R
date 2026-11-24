@@ -27,16 +27,8 @@ test_that("point estimates via run_scenarios equal plain life_add() (04)", {
   d <- params_def
   plain <- list(
     baseline = list(),
-    real_adh = list(
-      p_NA = d$p_NA - 0.05,
-      p_CA = d$p_CA + 0.1,
-      p_Att = d$p_Att + 0.1
-    ),
-    opt_adh = list(
-      p_NA = d$p_NA - 0.1,
-      p_CA = d$p_CA + 0.15,
-      p_Att = d$p_Att + 0.2
-    ),
+    real_adh = list(p_NA = d$p_NA - 0.05, p_CA = d$p_CA + 0.1, p_Att = d$p_Att + 0.1),
+    opt_adh = list(p_NA = d$p_NA - 0.1, p_CA = d$p_CA + 0.15, p_Att = d$p_Att + 0.2),
     diag_sens = list(
       Sens_0 = d$Sens_0 + 0.05,
       Sens_A = d$Sens_A + 0.05,

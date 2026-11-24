@@ -22,8 +22,5 @@ ledger <- stats::setNames(as.numeric(ledger$value), ledger$name)
 
 keep <- intersect(names(frozen), names(ledger))
 baseline <- ledger[keep]
-saveRDS(
-  baseline,
-  here::here("tests", "testthat", "fixtures", "ledger_baseline.rds")
-)
+saveRDS(baseline, here::here("tests", "testthat", "fixtures", "ledger_baseline.rds"))
 message("wrote ledger_baseline.rds (", length(baseline), " names)")

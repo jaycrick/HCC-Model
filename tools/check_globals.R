@@ -95,11 +95,7 @@ what_of <- ifelse(
   "undefined function",
   "undefined variable"
 )
-is_allowed <- mapply(
-  function(fn, nm) nm %in% allowed[[fn]],
-  fn_of,
-  name_of
-)
+is_allowed <- mapply(function(fn, nm) nm %in% allowed[[fn]], fn_of, name_of)
 bad <- unique(data.frame(
   fn = fn_of[!is_allowed],
   name = name_of[!is_allowed],

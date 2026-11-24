@@ -21,11 +21,7 @@ library(scales)
 library(latex2exp)
 
 # ----- Conflict preferences ---------------------------------------------------
-conflicts_prefer(
-  dplyr::filter,
-  dplyr::select,
-  dplyr::lag
-)
+conflicts_prefer(dplyr::filter, dplyr::select, dplyr::lag)
 
 # ----- Paper directories ------------------------------------------------------
 # R/ is the model core shared by every paper. Each paper keeps its own inputs
@@ -159,11 +155,7 @@ TeX_labels <- do.call(c, TeX_labels) # expression vector, as before
 names(TeX_labels) <- tex_param_names
 
 # Boot_labels: bootstrap parameter names as LaTeX expressions
-boot_specs <- list(
-  m = STAGE_IDS,
-  D = c("0", "A", "alpha"),
-  p = STAGE_IDS
-)
+boot_specs <- list(m = STAGE_IDS, D = c("0", "A", "alpha"), p = STAGE_IDS)
 Boot_labels <- do.call(
   c,
   unlist(

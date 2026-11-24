@@ -103,11 +103,7 @@ p_ca <- sweep_life_years(
 plot_sweep_band(
   p_ca,
   "Population in Completely Adherent Cohort",
-  title = paste(
-    "Effect of Complete Adherence\non Life Years over",
-    years,
-    "Years"
-  ),
+  title = paste("Effect of Complete Adherence\non Life Years over", years, "Years"),
   caption = paste0(
     "People are taken from the partially\nadherent cohort, whilst the ",
     "non-adherent\ncohort is assumed to be stationary"
@@ -139,12 +135,7 @@ plot_sweep_band(
   linewidth = 1.5,
   fill_title = "Confidence\nBand"
 ) |>
-  save_figure(
-    paste0("attendance_plot_", years, "_year"),
-    6,
-    5.5,
-    dpi = FIGURE_DPI_ALL
-  )
+  save_figure(paste0("attendance_plot_", years, "_year"), 6, 5.5, dpi = FIGURE_DPI_ALL)
 
 # ----- Stage-specific diagnoses vs attendance ---------------------------------
 stages <- sweep_stage_diagnoses(
@@ -163,13 +154,7 @@ plot_stage_diagnoses(
   ),
   stages_caption
 ) |>
-  save_figure(
-    paste0("attendance_plot_stages_", years, "_year"),
-    5,
-    8,
-    "jpg",
-    dpi = 300
-  )
+  save_figure(paste0("attendance_plot_stages_", years, "_year"), 5, 8, "jpg", dpi = 300)
 plot_stage_diagnoses(
   stages,
   paste0(

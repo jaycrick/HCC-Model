@@ -238,14 +238,7 @@ progress_step <- function(vec, p, stay) {
 #'   `undiagnosed` (people still undiagnosed in each state at month `t`,
 #'   length 7); both named by `stage_list`, and `sum(dx) + sum(undiagnosed)`
 #'   equals `n`.
-screen_cohort <- function(
-  Pr_Att,
-  ...,
-  n = 100,
-  t = 120,
-  m = 6,
-  params = params_def
-) {
+screen_cohort <- function(Pr_Att, ..., n = 100, t = 120, m = 6, params = params_def) {
   params <- modify_params(params, list(...))
   res <- screen_cohort_mat(Pr_Att, params, n, t, m)
   list(
@@ -301,13 +294,7 @@ screen_by_adherence_mat <- function(params, n, t, m) {
 #' @param m       Ultrasound interval months.
 #' @param params  Named parameter list (default `params_def`).
 #' @return Tibble with one column per `stage_list` state (people diagnosed).
-screen_by_adherence <- function(
-  ...,
-  n = 100,
-  t = 120,
-  m = 6,
-  params = params_def
-) {
+screen_by_adherence <- function(..., n = 100, t = 120, m = 6, params = params_def) {
   params <- modify_params(params, list(...))
   dx <- screen_by_adherence_mat(params, n, t, m)
   as_tibble(dx, .name_repair = "minimal")

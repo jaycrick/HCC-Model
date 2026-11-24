@@ -134,11 +134,7 @@ test_that("end_state_probs: exact vs closed form, T^100, T^1000 (fn 3, G8)", {
     1e-12,
     label = "exact Pr(d0) == closed form"
   )
-  expect_lte(
-    abs(exact[["dx_0"]] - d0_1000),
-    1e-9,
-    label = "exact Pr(d0) == T^1000"
-  )
+  expect_lte(abs(exact[["dx_0"]] - d0_1000), 1e-9, label = "exact Pr(d0) == T^1000")
   expect_equal(
     sum(exact),
     1,
@@ -158,10 +154,7 @@ test_that("end_state_probs: exact vs closed form, T^100, T^1000 (fn 3, G8)", {
 test_that("neg_log_lik is NaN outside [0,1]", {
   bad <- csv_par
   bad[1] <- 1.1
-  expect_true(
-    is.nan(neg_log_lik(bad)),
-    label = "neg_log_lik(p_0 = 1.1) is NaN"
-  )
+  expect_true(is.nan(neg_log_lik(bad)), label = "neg_log_lik(p_0 = 1.1) is NaN")
 })
 
 # ----- G7: the CSV point estimates are the MLE --------------------------------
@@ -218,9 +211,9 @@ test_that("polish-only starts are clipped and polished", {
 })
 
 test_that("refit_bootstrap does not depend on cores (2 resamples)", {
-  inputs <- readRDS(
-    paper_path("data-derived", "list_of_resampled_milton_output.rds")
-  )[1:2]
+  inputs <- readRDS(paper_path("data-derived", "list_of_resampled_milton_output.rds"))[
+    1:2
+  ]
   hpc <- bootstrap_estimates()
   starts_fn <- function(b) list(list(par = unlist(hpc[b, ]), nm = FALSE))
   one <- refit_bootstrap(inputs, starts_fn, cores = 1)

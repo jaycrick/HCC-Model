@@ -48,12 +48,7 @@ plot_scenarios_all(point, resampled_pars) |>
 
 # ----- Diminishing returns: adherence -----------------------------------------
 list(
-  list(
-    name = "Partial Adherence Attendence",
-    param = "p_Att",
-    max = 50,
-    sign = 1
-  ),
+  list(name = "Partial Adherence Attendence", param = "p_Att", max = 50, sign = 1),
   list(name = "Non-Adherence", param = "p_NA", max = 30, sign = -1),
   list(name = "Complete Adherence", param = "p_CA", max = 40, sign = 1)
 ) |>

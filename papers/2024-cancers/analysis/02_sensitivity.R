@@ -80,11 +80,7 @@ param_tbl_25 <- life_tibble(paper_path("data", "Parameters_25.csv"))
 param_chang_tbl <- modifiable_sensitivity(param_tbl_25)
 
 # Ledger: change in life-years from a 25% change in each modifiable parameter
-merged_names <- paste(
-  param_chang_tbl$Parameter,
-  param_chang_tbl$Bound,
-  sep = "_"
-)
+merged_names <- paste(param_chang_tbl$Parameter, param_chang_tbl$Bound, sep = "_")
 record_values(setNames(param_chang_tbl$years_mid_comp, merged_names))
 
 plot_tornado(

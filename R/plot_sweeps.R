@@ -14,10 +14,7 @@ eval_at <- function(fn, x, arg, overrides, t) {
     overrides <- utils::modifyList(overrides, swept)
     swept <- list()
   }
-  do.call(
-    fn,
-    c(list(params = modify_params(params_def, overrides), t = t), swept)
-  )
+  do.call(fn, c(list(params = modify_params(params_def, overrides), t = t), swept))
 }
 
 #' Evaluate a model function over a grid, at default parameters and for every
@@ -233,10 +230,7 @@ stage_distribution_by_risk <- function(
   risk = seq(0, 0.08, length.out = 1000),
   n = 100
 ) {
-  rows <- purrr::map(
-    risk,
-    ~ progress_untreated(n = n, t = years * 12, p_HCC = .x)
-  )
+  rows <- purrr::map(risk, ~ progress_untreated(n = n, t = years * 12, p_HCC = .x))
   dplyr::bind_cols(tibble::tibble(x = risk), dplyr::bind_rows(rows))
 }
 
@@ -296,10 +290,7 @@ plot_stage_distribution <- function(
       labels = label_percent(scale = 1),
       expand = expansion(c(0, 0.01))
     ) +
-    guides(
-      colour = guide_legend("HCC Stage"),
-      linetype = guide_legend("HCC Stage")
-    ) +
+    guides(colour = guide_legend("HCC Stage"), linetype = guide_legend("HCC Stage")) +
     facet_wrap(~graph_location, dir = "v", scales = "free_y") +
     labs(
       x = x_lab,

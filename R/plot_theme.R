@@ -56,13 +56,7 @@ save_figure <- function(
   dir.create(dir, showWarnings = FALSE, recursive = TRUE)
   paths <- file.path(dir, paste0(name, ".", formats))
   for (i in seq_along(formats)) {
-    ggplot2::ggsave(
-      paths[i],
-      plot,
-      width = width,
-      height = height,
-      dpi = dpis[[i]]
-    )
+    ggplot2::ggsave(paths[i], plot, width = width, height = height, dpi = dpis[[i]])
   }
   invisible(paths)
 }

@@ -22,9 +22,7 @@ source(here::here("R", "plot_calibration.R"))
 # the Nelder-Mead MLE; finding G7), in the order of NLL_PAR_NAMES.
 csv_par <- unlist(params_def[NLL_PAR_NAMES])
 
-resampled_pars_fin <- readRDS(
-  paper_path("data-derived", "resampled_pars_fin.rds")
-)
+resampled_pars_fin <- readRDS(paper_path("data-derived", "resampled_pars_fin.rds"))
 
 csv_main <- paper_path("data", "Parameters.csv")
 csv_25 <- paper_path("data", "Parameters_25.csv")

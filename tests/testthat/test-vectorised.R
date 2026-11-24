@@ -35,11 +35,7 @@ for (m in c(1, 6, 24)) {
 
   test_that(paste0("life_add_vec matches scalar loop, m = ", m), {
     vec <- life_add_vec(pars50, n = 100, t = 120, m = m)
-    ref <- vapply(
-      1:50,
-      function(i) life_add(m = m, params = row_pars(i)),
-      numeric(1)
-    )
+    ref <- vapply(1:50, function(i) life_add(m = m, params = row_pars(i)), numeric(1))
     expect_identical(vec, ref)
   })
 }
@@ -112,11 +108,7 @@ test_that("sweep_life_years on 5 draws equals a loop of scalar life_add", {
   sw <- sweep_life_years(c(1, 6, 24), "m", b5, t = 60)
   for (k in 1:3) {
     ly <- vapply(1:5, scalar_ly, 1, m = c(1, 6, 24)[k], t = 60)
-    expect_equal(
-      c(sw$lower[k], sw$upper[k]),
-      unname(quantile(ly, q)),
-      tolerance = 0
-    )
+    expect_equal(c(sw$lower[k], sw$upper[k]), unname(quantile(ly, q)), tolerance = 0)
   }
   sw <- sweep_life_years(
     c(0, 0.37, 1),
@@ -135,11 +127,7 @@ test_that("sweep_life_years on 5 draws equals a loop of scalar life_add", {
       p_CA = 0,
       t = 60
     )
-    expect_equal(
-      c(sw$lower[k], sw$upper[k]),
-      unname(quantile(ly, q)),
-      tolerance = 0
-    )
+    expect_equal(c(sw$lower[k], sw$upper[k]), unname(quantile(ly, q)), tolerance = 0)
   }
 })
 
@@ -161,17 +149,11 @@ test_that("zero-row boot gives NA bands and an unchanged point estimate", {
 })
 
 test_that("scenario modifiers on vector params equal elementwise scalar use", {
-  pars <- modifyList(
-    params_def,
-    as.list(prepare_draws(head(resampled_pars_fin, 8)))
-  )
+  pars <- modifyList(params_def, as.list(prepare_draws(head(resampled_pars_fin, 8))))
   for (nm in names(scenario_defs)) {
     v <- scenario_defs[[nm]](pars)
     for (i in 1:8) {
-      sc <- scenario_defs[[nm]](lapply(
-        pars,
-        function(x) x[[min(i, length(x))]]
-      ))
+      sc <- scenario_defs[[nm]](lapply(pars, function(x) x[[min(i, length(x))]]))
       got <- lapply(v, function(x) rep_len(x, 8)[[i]])
       expect_identical(got, sc, label = paste(nm, "draw", i))
     }

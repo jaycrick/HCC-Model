@@ -34,16 +34,8 @@ simulate_cohort <- function(
   )
   # Ref: Cumming 2024, Fig. 1 (arrow probabilities p_HCC, p_0 .. p_D)
   p_move <- tmat[cbind(1:6, 2:7)] # progression probability of states 1..6
-  sym_prob <- c(
-    0,
-    unlist(params[STAGE_SYM_NAMES]),
-    1
-  )
-  us_prob <- c(
-    0,
-    unlist(params[STAGE_SENS_NAMES]),
-    1
-  )
+  sym_prob <- c(0, unlist(params[STAGE_SYM_NAMES]), 1)
+  us_prob <- c(0, unlist(params[STAGE_SENS_NAMES]), 1)
   # Ref: Cumming 2024, Fig. 1 (attend ultrasound?)
   attend <- c(0, rep(Pr_Att, 5), 1)
 
@@ -78,13 +70,7 @@ simulate_cohort <- function(
 #'
 #' @inheritParams screen_by_adherence
 #' @return Numeric vector of length 7: people diagnosed per stage.
-simulate_by_adherence <- function(
-  ...,
-  n = 1000,
-  t = 120,
-  m = 6,
-  params = params_def
-) {
+simulate_by_adherence <- function(..., n = 1000, t = 120, m = 6, params = params_def) {
   params <- modify_params(params, list(...))
   # Ref: Supplement Sec. 3.1 (p. 11, partially adherent = 1 - p_NA - p_CA)
   prob <- c(params$p_NA, 1 - params$p_NA - params$p_CA, params$p_CA)

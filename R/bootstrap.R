@@ -94,13 +94,7 @@ calibration_data <- local({
 #' @param sens_0,sens_A  Ultrasound sensitivity in BCLC 0 and A.
 #' @return 15 x 15 numeric matrix with named dimensions.
 likelihood_matrix <- function(p_0, p_A, sens_0, sens_A) {
-  states <- c(
-    "dx_0",
-    "dx_A",
-    paste0("u0_", 6:1),
-    paste0("uA_", 6:1),
-    "past_A"
-  )
+  states <- c("dx_0", "dx_A", paste0("u0_", 6:1), paste0("uA_", 6:1), "past_A")
   tm <- matrix(0, 15, 15, dimnames = list(states, states))
   # Ref: Supplement matrix (S1), p. 16 (diagnosed states are absorbing)
   tm["dx_0", "dx_0"] <- 1
@@ -251,12 +245,7 @@ neg_log_lik <- function(
   # probabilities, not the published t^(100) approximation (about 1.4e-6).
   -(ll_median +
     dbinom(Dx_0, n_early, absorb[1], log = TRUE) +
-    dbinom(
-      Dx_A,
-      n_early - Dx_0,
-      absorb[2] / (1 - absorb[1]),
-      log = TRUE
-    ) +
+    dbinom(Dx_A, n_early - Dx_0, absorb[2] / (1 - absorb[1]), log = TRUE) +
     dbinom(Dx_sym_early, n_sym, pr_d_alpha, log = TRUE))
 }
 
@@ -266,10 +255,7 @@ neg_log_lik <- function(
 #  H2: Sym_B = SYM_B_RATIO * Sym_A must be <= 1, so Sym_A < 1 / SYM_B_RATIO;
 #  H4: fits can sit at p = 1, so the upper bound is 1 - 1e-6, not 1.
 FIT_LB <- setNames(c(rep(1e-3, 5), 1e-6, 1e-6, 1e-6), NLL_PAR_NAMES)
-FIT_UB <- setNames(
-  c(rep(1 - 1e-6, 7), (1 / SYM_B_RATIO) * (1 - 1e-6)),
-  NLL_PAR_NAMES
-)
+FIT_UB <- setNames(c(rep(1 - 1e-6, 7), (1 / SYM_B_RATIO) * (1 - 1e-6)), NLL_PAR_NAMES)
 # Penalty for a non-finite NLL inside the polish only (H3: Inf at p_D near 1).
 FIT_PENALTY <- 1e10
 
@@ -417,11 +403,7 @@ fit_mle <- function(
       start = seq_along(res),
       nm_value = vapply(res, function(r) r$nm_value, numeric(1)),
       polish_value = vapply(res, function(r) r$polish_value, numeric(1)),
-      polish_convergence = vapply(
-        res,
-        function(r) r$polish_convergence,
-        numeric(1)
-      ),
+      polish_convergence = vapply(res, function(r) r$polish_convergence, numeric(1)),
       chosen = seq_along(res) == best
     )
   )
@@ -458,13 +440,7 @@ needs_fallback <- function(fit) {
 #'   `best_start`.
 fit_resample <- function(x, starts, fallback = NULL) {
   fit_x <- function(s) {
-    fit_mle(
-      s,
-      meds = x[1:5],
-      Dx_0 = x[6],
-      Dx_A = x[7],
-      Dx_sym_early = x[8]
-    )
+    fit_mle(s, meds = x[1:5], Dx_0 = x[6], Dx_A = x[7], Dx_sym_early = x[8])
   }
   fit <- fit_x(starts)
   fit$best_start <- which(fit$starts$chosen)[1]
@@ -547,11 +523,7 @@ refit_bootstrap <- function(
       b = ids,
       value = vapply(res, function(r) r$value, numeric(1)),
       convergence = vapply(res, function(r) r$convergence, numeric(1)),
-      best_start = vapply(
-        res,
-        function(r) as.integer(r$best_start),
-        integer(1)
-      ),
+      best_start = vapply(res, function(r) as.integer(r$best_start), integer(1)),
       fallback = vapply(res, function(r) r$fallback, logical(1))
     ) |>
       dplyr::bind_cols(tibble::as_tibble(at_bound))
@@ -585,9 +557,7 @@ bootstrap_inputs_long <- function(
 #'
 #' @param path  Path to the shipped RDS (HPC optimiser output).
 #' @return Tibble with one row per resample, columns `NLL_PAR_NAMES`.
-bootstrap_estimates <- function(
-  path = paper_path("data-derived", "miltonoutput.rds")
-) {
+bootstrap_estimates <- function(path = paper_path("data-derived", "miltonoutput.rds")) {
   tibble(list_of_pars = readRDS(path)) |>
     unnest_wider(list_of_pars) |>
     select(par) |>
