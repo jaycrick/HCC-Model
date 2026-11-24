@@ -9,37 +9,73 @@ permissions:
 
 jobs:
   check:
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
     env:
+      # rig needs a token to fetch hypogeom from GitHub without rate limits.
       GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
+      RIG_CACHE_DIR: ${{ runner.temp }}/rig-cache
     steps:
       - uses: actions/checkout@v5
         with:
           lfs: true
 
-      # R version is taken from renv.lock.
-      - uses: r-lib/actions/setup-r@v2
-        with:
-          r-version: renv
-          use-public-rspm: true
+      # rig is installed in user mode (no admin rights), as collaborators do.
+      - name: Install rig (Linux)
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          curl -LsSf https://r-lib.github.io/rig/install.sh | sh
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
 
-      - uses: r-lib/actions/setup-renv@v2
+      - name: Install rig (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          irm https://r-lib.github.io/rig/install.ps1 | iex
+          "$env:USERPROFILE\.local\bin" | Out-File -FilePath $env:GITHUB_PATH -Append -Encoding utf8
+
+      - name: Check rig version
+        run: rig --version
+
+      - name: Switch rig to user mode
+        run: rig system user-mode
+
+      # Downloaded packages and binaries, keyed on the lock file.
+      - uses: actions/cache@v4
+        with:
+          path: ${{ runner.temp }}/rig-cache
+          key: rig-${{ runner.os }}-${{ hashFiles('rproj.lock') }}
+
+      # R and packages come from rproj.lock; fail if the lock is stale.
+      - name: Check lock file is current
+        run: rig proj lock --check
+
+      - name: Install R and packages
+        run: rig proj sync --locked
 
       # Pinned so a new air release cannot change formatting and fail CI;
       # keep in step with the version developers run locally (`air --version`).
-      - name: Install air
-        run: |
-          curl -fsSL https://github.com/posit-dev/air/releases/download/0.4.1/air-installer.sh | sh
-          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+      - uses: posit-dev/setup-air@v1
+        if: runner.os == 'Linux'
+        with:
+          version: "0.4.1"
 
       - name: Check formatting
+        if: runner.os == 'Linux'
         run: air format --check .
 
       - name: Lint ratchet
-        run: Rscript tools/lint_ratchet.R
+        shell: bash
+        run: rig run tools/lint_ratchet.R
 
       - name: Undefined names
-        run: Rscript tools/check_globals.R
+        shell: bash
+        run: rig run tools/check_globals.R
 
       - name: Tests
-        run: Rscript -e 'testthat::test_dir("tests/testthat", stop_on_failure = TRUE)'
+        shell: bash
+        run: rig run tests/testthat.R
