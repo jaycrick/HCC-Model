@@ -724,14 +724,14 @@ metadata = { RemoteHash = "380d5237dbfa722fddb7d1d9ad8520a2b26331dbbb77d51850ded
 
 [[targets.packages]]
 package = "hypogeom"
-version = "0.0.0.9000"
+version = "0.0.0.9001"
 binary = false
 platform = "source"
 dependencies = []
-sources = ["git+https://github.com/damian-t-p/hypogeom.git#commit=2b329c44e6bbefdae5544f61a90c0ea2a87e52eb"]
-target = "git/github/damian-t-p/hypogeom/2b329c44e6bbefdae5544f61a90c0ea2a87e52eb"
+sources = ["git+https://github.com/jaycrick/hypogeom.git#commit=14b2c8d17a93090edf716aa0c5e39eacb0a43545"]
+target = "git/github/jaycrick/hypogeom/14b2c8d17a93090edf716aa0c5e39eacb0a43545"
 groups = ["main"]
-metadata = { RemoteHost = "github.com", RemoteRef = "2b329c44e6bbefdae5544f61a90c0ea2a87e52eb", RemoteRepo = "damian-t-p/hypogeom", RemoteSha = "2b329c44e6bbefdae5544f61a90c0ea2a87e52eb", RemoteType = "github", RemoteUrl = "https://github.com/damian-t-p/hypogeom.git", RemoteUsername = "damian-t-p" }
+metadata = { RemoteHost = "github.com", RemoteRef = "14b2c8d17a93090edf716aa0c5e39eacb0a43545", RemoteRepo = "jaycrick/hypogeom", RemoteSha = "14b2c8d17a93090edf716aa0c5e39eacb0a43545", RemoteType = "github", RemoteUrl = "https://github.com/jaycrick/hypogeom.git", RemoteUsername = "jaycrick" }
 
 [[targets.packages]]
 package = "bit"
@@ -2294,14 +2294,14 @@ metadata = { RemoteHash = "380d5237dbfa722fddb7d1d9ad8520a2b26331dbbb77d51850ded
 
 [[targets.packages]]
 package = "hypogeom"
-version = "0.0.0.9000"
+version = "0.0.0.9001"
 binary = false
 platform = "source"
 dependencies = []
-sources = ["git+https://github.com/damian-t-p/hypogeom.git#commit=2b329c44e6bbefdae5544f61a90c0ea2a87e52eb"]
-target = "git/github/damian-t-p/hypogeom/2b329c44e6bbefdae5544f61a90c0ea2a87e52eb"
+sources = ["git+https://github.com/jaycrick/hypogeom.git#commit=14b2c8d17a93090edf716aa0c5e39eacb0a43545"]
+target = "git/github/jaycrick/hypogeom/14b2c8d17a93090edf716aa0c5e39eacb0a43545"
 groups = ["main"]
-metadata = { RemoteHost = "github.com", RemoteRef = "2b329c44e6bbefdae5544f61a90c0ea2a87e52eb", RemoteRepo = "damian-t-p/hypogeom", RemoteSha = "2b329c44e6bbefdae5544f61a90c0ea2a87e52eb", RemoteType = "github", RemoteUrl = "https://github.com/damian-t-p/hypogeom.git", RemoteUsername = "damian-t-p" }
+metadata = { RemoteHost = "github.com", RemoteRef = "14b2c8d17a93090edf716aa0c5e39eacb0a43545", RemoteRepo = "jaycrick/hypogeom", RemoteSha = "14b2c8d17a93090edf716aa0c5e39eacb0a43545", RemoteType = "github", RemoteUrl = "https://github.com/jaycrick/hypogeom.git", RemoteUsername = "jaycrick" }
 
 [[targets.packages]]
 package = "bit"
@@ -3863,14 +3863,14 @@ metadata = { RemoteHash = "380d5237dbfa722fddb7d1d9ad8520a2b26331dbbb77d51850ded
 
 [[targets.packages]]
 package = "hypogeom"
-version = "0.0.0.9000"
+version = "0.0.0.9001"
 binary = false
 platform = "source"
 dependencies = []
-sources = ["git+https://github.com/damian-t-p/hypogeom.git#commit=2b329c44e6bbefdae5544f61a90c0ea2a87e52eb"]
-target = "git/github/damian-t-p/hypogeom/2b329c44e6bbefdae5544f61a90c0ea2a87e52eb"
+sources = ["git+https://github.com/jaycrick/hypogeom.git#commit=14b2c8d17a93090edf716aa0c5e39eacb0a43545"]
+target = "git/github/jaycrick/hypogeom/14b2c8d17a93090edf716aa0c5e39eacb0a43545"
 groups = ["main"]
-metadata = { RemoteHost = "github.com", RemoteRef = "2b329c44e6bbefdae5544f61a90c0ea2a87e52eb", RemoteRepo = "damian-t-p/hypogeom", RemoteSha = "2b329c44e6bbefdae5544f61a90c0ea2a87e52eb", RemoteType = "github", RemoteUrl = "https://github.com/damian-t-p/hypogeom.git", RemoteUsername = "damian-t-p" }
+metadata = { RemoteHost = "github.com", RemoteRef = "14b2c8d17a93090edf716aa0c5e39eacb0a43545", RemoteRepo = "jaycrick/hypogeom", RemoteSha = "14b2c8d17a93090edf716aa0c5e39eacb0a43545", RemoteType = "github", RemoteUrl = "https://github.com/jaycrick/hypogeom.git", RemoteUsername = "jaycrick" }
 
 [[targets.packages]]
 package = "bit"
@@ -5428,14 +5428,14 @@ metadata = { RemoteHash = "380d5237dbfa722fddb7d1d9ad8520a2b26331dbbb77d51850ded
 
 [[targets.packages]]
 package = "hypogeom"
-version = "0.0.0.9000"
+version = "0.0.0.9001"
 binary = false
 platform = "source"
 dependencies = []
-sources = ["git+https://github.com/damian-t-p/hypogeom.git#commit=2b329c44e6bbefdae5544f61a90c0ea2a87e52eb"]
-target = "git/github/damian-t-p/hypogeom/2b329c44e6bbefdae5544f61a90c0ea2a87e52eb"
+sources = ["git+https://github.com/jaycrick/hypogeom.git#commit=14b2c8d17a93090edf716aa0c5e39eacb0a43545"]
+target = "git/github/jaycrick/hypogeom/14b2c8d17a93090edf716aa0c5e39eacb0a43545"
 groups = ["main"]
-metadata = { RemoteHost = "github.com", RemoteRef = "2b329c44e6bbefdae5544f61a90c0ea2a87e52eb", RemoteRepo = "damian-t-p/hypogeom", RemoteSha = "2b329c44e6bbefdae5544f61a90c0ea2a87e52eb", RemoteType = "github", RemoteUrl = "https://github.com/damian-t-p/hypogeom.git", RemoteUsername = "damian-t-p" }
+metadata = { RemoteHost = "github.com", RemoteRef = "14b2c8d17a93090edf716aa0c5e39eacb0a43545", RemoteRepo = "jaycrick/hypogeom", RemoteSha = "14b2c8d17a93090edf716aa0c5e39eacb0a43545", RemoteType = "github", RemoteUrl = "https://github.com/jaycrick/hypogeom.git", RemoteUsername = "jaycrick" }
 
 [[targets.packages]]
 package = "bit"

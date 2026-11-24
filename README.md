@@ -118,9 +118,11 @@ git lfs install
   tests must still pass afterwards.
 
 > **Note on `hypogeom`:** This package was written specifically for this project by
-> co-author Damian Pavlyshyn and is only available from GitHub
-> (`damian-t-p/hypogeom`). `rig proj sync` installs it from GitHub at the commit
-> pinned in `rproj.lock`.
+> co-author Damian Pavlyshyn and is only available from GitHub. The project uses
+> the fork `jaycrick/hypogeom`, a fork of `damian-t-p/hypogeom` that computes the
+> PMF prefix exactly instead of by FFT (about 15x faster fit and more accurate;
+> see CHANGES.md S14; proposed upstream as damian-t-p/hypogeom#2). `rig proj sync`
+> installs it from GitHub at the commit pinned in `rproj.lock`.
 
 ---
 

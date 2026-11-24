@@ -250,8 +250,10 @@ neg_log_lik <- function(
 }
 
 # Box for the polish step (probability scale). Reasons:
-#  H1: a tiny p makes the hypogeometric FFT support huge (up to 8 s and many
-#      GB per evaluation at p = 1e-4), so the five p_* stay above 1e-3;
+#  H1: a tiny p made the hypogeometric FFT support huge (up to 8 s and many
+#      GB per evaluation at p = 1e-4). That cost no longer applies since the
+#      exact-prefix hypogeom (CHANGES.md S14); the five p_* still stay above
+#      1e-3 so that fits remain reproducible;
 #  H2: Sym_B = SYM_B_RATIO * Sym_A must be <= 1, so Sym_A < 1 / SYM_B_RATIO;
 #  H4: fits can sit at p = 1, so the upper bound is 1 - 1e-6, not 1.
 FIT_LB <- setNames(c(rep(1e-3, 5), 1e-6, 1e-6, 1e-6), NLL_PAR_NAMES)

@@ -15,18 +15,39 @@ golden_ll <- readRDS(here::here(
   "likelihood_golden.rds"
 ))
 
+# Box corner: the golden value was made with the FFT hypogeom. At the corner all
+# five p_* are 1e-3, so stage 1 is a negative binomial and the exact-prefix
+# hypogeom (CHANGES.md S14) is the accurate one: it matches dnbinom(33, 5, 1e-3)
+# to 2e-15, while the old FFT was 5.4e-7 relative off (cdf 2.4e-6). neg_log_lik
+# there moves by 5.6e-9 relative (loglik_medians by 7.5e-9), hence tolerance
+# 1e-8 for this point only.
+test_that("stage-1 terms at the box corner are exact", {
+  # meds[1] = 38 months, minus 5 stages: x = 33
+  expect_equal(calibration_data$stage$med[1] - 5, 33)
+  expect_equal(
+    hypogeom::dhypogeom(33, rep(1e-3, 5)),
+    dnbinom(33, 5, 1e-3),
+    tolerance = 1e-13
+  )
+  expect_equal(
+    hypogeom::phypogeom(33, rep(1e-3, 5)),
+    pnbinom(33, 5, 1e-3),
+    tolerance = 1e-13
+  )
+})
+
 test_that("neg_log_lik and loglik_medians match the golden points", {
   for (pt in golden_ll$points) {
     expect_equal(
       do.call(neg_log_lik, c(list(pt$par), pt$data)),
       pt$nll,
-      tolerance = 1e-12,
+      tolerance = if (pt$label == "box corner") 1e-8 else 1e-12,
       label = paste0("neg_log_lik at ", pt$label)
     )
     expect_equal(
       loglik_medians(pt$par, pt$data$meds),
       pt$ll_med,
-      tolerance = 1e-12,
+      tolerance = if (pt$label == "box corner") 1e-8 else 1e-12,
       label = paste0("loglik_medians at ", pt$label)
     )
   }

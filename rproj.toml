@@ -22,7 +22,7 @@ DescTools = "*"
 ppcor = "*"
 corrplot = "*"
 cowplot = "*"
-hypogeom = { git = "https://github.com/damian-t-p/hypogeom.git", rev = "2b329c44e6bbefdae5544f61a90c0ea2a87e52eb", ref = "damian-t-p/hypogeom@2b329c44e6bbefdae5544f61a90c0ea2a87e52eb" }
+hypogeom = { git = "https://github.com/jaycrick/hypogeom.git", rev = "14b2c8d17a93090edf716aa0c5e39eacb0a43545", ref = "jaycrick/hypogeom@14b2c8d17a93090edf716aa0c5e39eacb0a43545" }
 
 [tool.rig]
 prefer-binary = true

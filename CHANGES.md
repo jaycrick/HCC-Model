@@ -93,6 +93,45 @@
   - Tests: `PUBLISHED_MLE` names and rounded values; the point fit from the
     fixed starts reproduces the CSV to 1e-7.
 
+- S14: hypogeom exact PMF prefix (fork `jaycrick/hypogeom`).
+  - Problem: profiling `fit_mle(list(NM_START))` (7.35 s, 2 601 NLL
+    evaluations) put 94% of the time in the hypogeom FFT, reached through
+    `DescTools::dOrder` from `loglik_medians()`. The FFT runs over N = 205 to
+    3 375 points (about 1.9e5 at p = 1e-3) to get the terms x <= 36 that the
+    stage medians need (x <= 33 for the default data).
+  - Fix: the fork computes the needed prefix exactly, by sequential
+    convolution (all terms are non-negative, so no cancellation). It is pinned
+    in `rproj.toml` / `rproj.lock` at
+    `jaycrick/hypogeom@14b2c8d17a93090edf716aa0c5e39eacb0a43545`
+    (upstream PR https://github.com/damian-t-p/hypogeom/pull/2, branch
+    `perf/exact-prefix`; version 0.0.0.9001). Only the hypogeom entries of the
+    lock changed.
+  - Numerical effect: at the golden points (`test-likelihood-golden.R`) the
+    relative NLL difference is at most about 3e-15, except the box corner
+    (5.6e-9 for `neg_log_lik`, 7.5e-9 for `loglik_medians`). That is an
+    accuracy fix: all five p_* are 1e-3 there, so stage 1 is a negative
+    binomial; the exact value matches `dnbinom(33, 5, 1e-3)` to 2e-15, while
+    the old FFT was 5.4e-7 relative off (cdf 2.4e-6). The golden file is not
+    regenerated; the box corner uses tolerance 1e-8 and a new test checks the
+    stage-1 terms against `dnbinom`/`pnbinom` to 1e-13. `fit_mle(NM_START)`:
+    par differs by 3.9e-10, value by 2.5e-14. `run_all.R`: the ledger
+    `manuscript_values.csv` is byte-identical (draws are frozen data).
+  - Refit caveat: rerunning `tools/refit_calibration.R` no longer
+    bit-reproduces the shipped draws (see S13: perturbations of about 1e-9 can
+    flip the winning start). On the first 200 resamples (config d), 65 differ
+    from the shipped `resampled_pars.rds` by more than 1e-9 and 6 by more than
+    1e-6 (max abs 9.5e-6, max rel 1.0e-5); the old hypogeom reproduces all 200
+    exactly. The shipped files are unchanged.
+  - Timing (arm64, R 4.6, one run each, about 10% noise; refit with 10 cores,
+    `--n 200 --audit 0`; wall times):
+
+    | | old hypogeom | exact prefix |
+    |---|---|---|
+    | `fit_mle(list(NM_START))` | 7.35 s | 0.64 s |
+    | test suite (`tests/testthat.R`) | about 67 s (660 tests) | 16.4 s (663 tests) |
+    | `run_all.R` | not measured | 83 s |
+    | refit, 200 resamples | 286 s (1.36 s per resample; refit step 272.8 s) | 18.4 s (refit step time not recorded) |
+
 # Changes that alter model output
 
 ## G1 - untreated progression double conversion (finding C1)
