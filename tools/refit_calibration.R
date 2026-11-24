@@ -11,8 +11,8 @@
 #                                     [--audit <int>] [--dry-run] [--out <dir>]
 #
 #   --n        refit only the first n resamples (default: all 10 000)
-#   --cores    forked workers (default: detectCores() - 1); results do not
-#              depend on it
+#   --cores    forked workers (default: detectCores() - 1; always 1 on
+#              Windows, which cannot fork); results do not depend on it
 #   --config   start strategy per resample (default d):
 #                a  NM + polish from NM_START, the new point MLE and the old
 #                   HPC estimate;
@@ -65,7 +65,7 @@ parse_args <- function(args) {
   }
   list(
     n = as.integer(get("--n", NA)),
-    cores = as.integer(get(
+    cores = fork_cores(get(
       "--cores",
       max(1L, parallel::detectCores() - 1L)
     )),

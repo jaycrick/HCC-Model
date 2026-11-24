@@ -481,6 +481,15 @@ fit_resample <- function(x, starts, fallback = NULL) {
   fit
 }
 
+#' Number of forked workers parallel::mclapply() can use: `cores`, except on
+#' Windows, where forking is unavailable and mclapply() refuses more than 1.
+#'
+#' @param cores  Requested number of workers.
+#' @return Integer number of workers.
+fork_cores <- function(cores) {
+  if (.Platform$OS.type == "windows") 1L else as.integer(cores)
+}
+
 #' Refit the MLE for every bootstrap resample, in parallel and deterministic.
 #'
 #' Ref: Supplement Sec. 2.1.4-2.1.5 (p. 7: bootstrap samples, bootstrap MLEs).
@@ -494,7 +503,8 @@ fit_resample <- function(x, starts, fallback = NULL) {
 #' @param inputs  List read from list_of_resampled_milton_output.rds.
 #' @param starts_fn  Function of the resample index b returning a list of
 #'   starts.
-#' @param cores  Forked workers; the result does not depend on it.
+#' @param cores  Forked workers; the result does not depend on it. Forking is
+#'   unavailable on Windows, so there it always runs serially (fork_cores()).
 #' @param fallback_fn  NULL, or a function of b returning a list of starts to
 #'   try (and compare) if the primary fit needs the fallback.
 #' @param ids  Resample indices to fit (default all).
@@ -515,7 +525,7 @@ refit_bootstrap <- function(
   res <- parallel::mclapply(
     ids,
     function(b) try(one(b), silent = TRUE),
-    mc.cores = cores,
+    mc.cores = fork_cores(cores),
     mc.preschedule = FALSE
   )
   bad <- which(vapply(res, inherits, logical(1), what = "try-error"))
