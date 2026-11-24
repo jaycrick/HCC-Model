@@ -19,7 +19,16 @@ and outputs.
 | Folder | Paper | Status |
 |--------|-------|--------|
 | [`papers/2024-cancers`](papers/2024-cancers) | Cumming et al. **Improving Hepatocellular Carcinoma Surveillance Outcomes in Patients with Cirrhosis after Hepatitis C Cure: A Modelling Study.** *Cancers* 2024, 16(15), 2745. https://doi.org/10.3390/cancers16152745 | Published |
-| [`papers/stochastic`](papers/stochastic) | Stochastic model with additional compartments (working title) | In preparation |
+| [`papers/stochastic`](papers/stochastic) | Stochastic model with additional compartments (working title); adds a 3-class due-until-attend adherence model fitted to aggregate data | In preparation |
+
+## Data provenance and confidentiality
+
+- Paper 1's adherence inputs came from unpublished tertiary-hospital data.
+- Paper 2 ships only the aggregate (A, F, n) tables, which are a sufficient
+  statistic for the adherence likelihood. They are described in
+  [`papers/stochastic/data/README.md`](papers/stochastic/data/README.md).
+- The raw data and the scripts that build the tables are held by the authors
+  outside this repository.
 
 ## Versions and archives
 

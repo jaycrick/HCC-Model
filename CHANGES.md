@@ -1,5 +1,43 @@
 # Changes
 
+## Unreleased: due-until-attend adherence model (paper 2)
+
+No change to paper 1: every default (`adherence = "scheduled"`, `init = "due"`)
+gives the same results as before.
+
+- New 3-class "due-until-attend" adherence model. A person is not due for `m`
+  months after an attended scan, then due; a due person attends with
+  probability `Att_*` each month until they attend. Classes are Low/Med/High.
+  - `screen_cohort_due_mat()` (R/model_core.R) and the stochastic counterpart
+    `simulate_cohort_due()`.
+  - New arguments `adherence = c("scheduled", "due")` and
+    `init = c("due", "gap")` on the cohort/life-years functions and on
+    `simulate_by_adherence()`. The defaults (`"scheduled"`, `"due"`) are
+    unchanged and `init` is used only with `adherence = "due"`.
+- Parameter names: new model `Pi_Low`, `Pi_Med`, `Pi_High` (class shares, sum
+  to 1) and `Att_Low`, `Att_Med`, `Att_High` (monthly attendance probability
+  while due); constants `ADH_IDS`, `ADH_PI_NAMES`, `ADH_ATT_NAMES` in
+  R/setup.R. Paper 1's `p_NA`, `p_CA`, `p_Att` are frozen and used only by
+  `adherence = "scheduled"`; the two sets are never mixed.
+- `R/adherence.R`: likelihood on the (A, F, n) table, EM and optim fits
+  (`fit_adherence()`, multi-start, optional fixed parameters), profile
+  likelihood CIs, bootstrap, posterior class membership and the person-level
+  simulator `simulate_adherence_people()`.
+- `R/adherence_data.R`: cleaning rules that turn scan histories into the
+  (A, F, n) counts (`due_exposure()` etc.). Scans and the end of follow-up are
+  converted to whole months first, then `regularise_us_months()` merges gaps
+  under 3 months and pushes gaps of 3 to 5 months to +6, shifting later scans
+  and the end with them. The raw data are unpublished and held by the authors
+  outside the repo.
+- Paper 2 (`papers/stochastic`): `analysis/01_fit_adherence.R`, committed
+  tables `data/adherence_counts*.csv` (base plus three sensitivity variants,
+  described in `data/README.md`), model comparison, sensitivity and goodness
+  of fit tables in `output/`, and the bootstrap in `data-derived/`.
+- Tests: `test-adherence.R`, `test-adherence-model.R`,
+  `test-adherence-data.R` and `test-adherence-golden.R` (golden fit pinned in
+  `fixtures/adherence_golden.rds`, made once by
+  `fixtures/make_adherence_golden.R`). No test reads raw data.
+
 ## Structural changes (no numerical effect; S11 below 1e-12, see entry), S1-S11
 
 - S1: characterisation, invariant and paper-anchor test suite (golden values

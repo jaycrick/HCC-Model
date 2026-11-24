@@ -65,6 +65,13 @@ STAGE_SYM_NAMES <- paste0("Sym_", STAGE_IDS) # symptomatic presentation
 STAGE_SENS_NAMES <- paste0("Sens_", STAGE_IDS) # ultrasound sensitivity
 STAGE_L_NAMES <- paste0("L_", STAGE_IDS) # life expectancy at diagnosis
 
+# Adherence classes of the "due" model (paper 2): Low / Medium / High attenders.
+# Pi_* are the latent-class shares (sum to 1), Att_* the monthly probability of
+# attending while due. Paper 1's p_NA, p_CA, p_Att belong to "scheduled" only.
+ADH_IDS <- c("Low", "Med", "High")
+ADH_PI_NAMES <- paste0("Pi_", ADH_IDS)
+ADH_ATT_NAMES <- paste0("Att_", ADH_IDS)
+
 # ----- Default parameters (point estimates) -----------------------------------
 
 #' Read a Parameters CSV into a named list.

@@ -17,6 +17,8 @@ source(here::here("R", "plot_theme.R"))
 source(here::here("R", "plot_sweeps.R"))
 source(here::here("R", "plot_scenarios.R"))
 source(here::here("R", "plot_calibration.R"))
+source(here::here("R", "adherence_data.R"))
+source(here::here("R", "adherence.R"))
 
 # The 8 likelihood parameters at the CSV point estimates (= paper Tables 1-2 =
 # the Nelder-Mead MLE; finding G7), in the order of NLL_PAR_NAMES.

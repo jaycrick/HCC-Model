@@ -60,6 +60,66 @@ simulate_cohort <- function(
   setNames(dx, stage_list)
 }
 
+#' Stochastic analogue of screen_cohort_due_mat() (one cohort).
+#'
+#' Same slots and order of operations as `screen_cohort_due_mat()`: per clock
+#' slot, binomial progression then symptomatic detection; then the due slot
+#' attends (binomial with `q`) and attenders are detected (binomial with
+#' Sens_X). See that function for the clock and `init` semantics (`q` is per
+#' due month).
+#'
+#' Ref: plan 2026-11-24, Sec. 4 S3 (not in the publication).
+#'
+#' @inheritParams screen_cohort
+#' @param q     Monthly attendance probability while due (scalar).
+#' @param init  "due" or "gap".
+#' @return Numeric vector of length 7 (named by `stage_list`): people
+#'   diagnosed per stage.
+simulate_cohort_due <- function(
+  q,
+  ...,
+  n = 1000,
+  t = 120,
+  m = 6,
+  params = params_def,
+  init = c("due", "gap")
+) {
+  init <- match.arg(init)
+  params <- modify_params(params, list(...))
+  tmat <- transition_matrix(
+    annual_to_monthly(params$p_HCC),
+    unlist(params[STAGE_P_NAMES])
+  )
+  p_move <- tmat[cbind(1:6, 2:7)]
+  sym_prob <- c(0, unlist(params[STAGE_SYM_NAMES]), 1)
+  us_prob <- c(0, unlist(params[STAGE_SENS_NAMES]), 1)
+  slots <- replicate(m, numeric(7), simplify = FALSE)
+  slots[[if (init == "due") m else 1]] <- c(n, rep(0, 6))
+  dx <- rep(0, 7)
+  for (i in 1:t) {
+    for (k in seq_len(m)) {
+      vec <- slots[[k]]
+      move <- rbinom(6, vec[1:6], p_move)
+      vec <- vec - c(move, 0) + c(0, move)
+      sym <- rbinom(7, vec, sym_prob)
+      dx <- dx + sym
+      slots[[k]] <- vec - sym
+    }
+    due <- slots[[m]]
+    att <- rbinom(7, due, q)
+    us <- rbinom(7, att, us_prob)
+    dx <- dx + us
+    new <- replicate(m, numeric(7), simplify = FALSE)
+    new[[1]] <- att - us
+    for (k in seq_len(m - 1)) {
+      new[[k + 1]] <- slots[[k]]
+    }
+    new[[m]] <- new[[m]] + (due - att)
+    slots <- new
+  }
+  setNames(dx, stage_list)
+}
+
 #' Stochastic analogue of screen_by_adherence().
 #'
 #' Ref: Cumming 2024, Sec. 2.1 (p. 4, three adherence cohorts) and Table 3.
@@ -68,14 +128,45 @@ simulate_cohort <- function(
 #' (multinomial draw), each group is simulated with `simulate_cohort()`
 #' (attendance 0, `p_Att`, 1) and the diagnoses are summed.
 #'
+#' With `adherence = "due"` (paper 2, not in the publication) each group is
+#' simulated with `simulate_cohort_due()` and monthly due-attendance
+#' probabilities `Att_Low`, `Att_Med`, `Att_High` and class shares `Pi_*` (required;
+#' error if missing; p_NA, p_CA, p_Att are not read); `Att_*` are per due month.
+#' `init` is only used in that mode.
+#'
 #' @inheritParams screen_by_adherence
 #' @return Numeric vector of length 7: people diagnosed per stage.
-simulate_by_adherence <- function(..., n = 1000, t = 120, m = 6, params = params_def) {
+simulate_by_adherence <- function(
+  ...,
+  n = 1000,
+  t = 120,
+  m = 6,
+  params = params_def,
+  adherence = c("scheduled", "due"),
+  init = c("due", "gap")
+) {
+  adherence <- match.arg(adherence)
+  init <- match.arg(init)
   params <- modify_params(params, list(...))
+  due <- if (adherence == "due") due_class_params(params)
   # Ref: Supplement Sec. 3.1 (p. 11, partially adherent = 1 - p_NA - p_CA)
-  prob <- c(params$p_NA, 1 - params$p_NA - params$p_CA, params$p_CA)
+  prob <- if (adherence == "due") {
+    unlist(due$pi)
+  } else {
+    c(params$p_NA, 1 - params$p_NA - params$p_CA, params$p_CA)
+  }
   n_group <- as.vector(rmultinom(1, n, prob))
   # Ref: Cumming 2024, Sec. 2.1 (attendance 0, p_Att, 1 per cohort)
+  if (adherence == "due") {
+    q <- unlist(due$q)
+    return(rowSums(mapply(
+      function(ng, a) {
+        simulate_cohort_due(a, n = ng, t = t, m = m, params = params, init = init)
+      },
+      n_group,
+      q
+    )))
+  }
   att <- c(0, params$p_Att, 1)
   rowSums(mapply(
     function(ng, a) simulate_cohort(a, n = ng, t = t, m = m, params = params),

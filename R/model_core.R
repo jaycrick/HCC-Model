@@ -194,6 +194,89 @@ screen_cohort_mat <- function(Pr_Att, params, n, t, m) {
   list(dx = Dx, undiagnosed = vec)
 }
 
+#' Vectorised "due-until-attend" detection model: N cohorts at once.
+#'
+#' Alternative to `screen_cohort_mat()` for the 3-class adherence model of
+#' paper 2 (not in the publication). There is no fixed scan calendar. A person
+#' is either not due (they attended a scan fewer than `m` months ago) or due,
+#' and a due person attends with probability `q` EACH MONTH until they attend.
+#' So `q` is a per-due-month probability, not a per-scheduled-scan one as
+#' `Pr_Att` is in `screen_cohort_mat()`.
+#'
+#' State: a list of `m` N x 7 matrices (undiagnosed people per disease state)
+#' indexed by clock slot. At the attendance step of a month, slot k < m holds
+#' people who attended k months earlier (not due) and slot m holds the due
+#' people. After a scan in month s the person is therefore next able to attend
+#' in month s + m, as in `due_exposure()` (R/adherence_data.R).
+#'
+#' Each month, in the same order as `screen_cohort_mat()`: (1) progression on
+#' every slot, (2) symptomatic detection (Sym_X) on every slot, (3) due people
+#' attend with probability `q` and attenders are detected with Sens_X (the
+#' Cirrhosis column has Sens 0 and the Mortality column 1, as in
+#' `screen_cohort_mat()`); attended-but-undetected people go to slot 1, other
+#' not-due people move one slot on and due non-attenders stay due.
+#'
+#' `init = "gap"`: at t = 0 everyone has just been scanned (slot 1 at month 1),
+#' so the first possible scan is in month m. With q = 1 the scan months are
+#' m, 2m, 3m, ..., exactly those of `screen_cohort_mat()` with Pr_Att = 1.
+#' `init = "due"`: everyone is due in month 1. Assumption (off by one): the
+#' data fit (`due_exposure()`) counts month 0 as the first due month, whereas
+#' the first model step is month 1; a person with exposure T months in the data
+#' corresponds to t = T model months, month i being data month i - 1.
+#'
+#' Ref: plan 2026-11-24, Sec. 4 S3 (not in the publication); the monthly
+#' sequence follows Cumming 2024, Fig. 1.
+#'
+#' @param q       Monthly attendance probability while due, length 1 or N.
+#' @param params  Named parameter list; each element has length 1 or N.
+#' @param n       Cohort size, length 1 or N.
+#' @param t       Total follow-up in months.
+#' @param m       Months from an attended scan to the next possible one.
+#' @param init    "due" (everyone due in month 1) or "gap" (everyone just
+#'                scanned at month 0).
+#' @return List with `dx` and `undiagnosed` (N x 7 matrices, colnames
+#'   `stage_list`; `undiagnosed` is summed over clock slots) and `scans`
+#'   (length N, expected number of attended scans per cohort).
+screen_cohort_due_mat <- function(q, params, n, t, m, init = c("due", "gap")) {
+  init <- match.arg(init)
+  N <- n_cohorts(params, q, n)
+  p <- cbind(
+    annual_to_monthly(rep_len(params$p_HCC, N)),
+    param_matrix(params, STAGE_P_NAMES, N)
+  )
+  stay <- 1 - p
+  sym_prob <- cbind(0, param_matrix(params, STAGE_SYM_NAMES, N), 1)
+  US_probs <- cbind(0, param_matrix(params, STAGE_SENS_NAMES, N), 1)
+  qv <- rep_len(q, N) # row-wise: multiplies each column of an N x 7 matrix
+  slots <- replicate(m, matrix(0, N, 7), simplify = FALSE)
+  slots[[if (init == "due") m else 1]] <- cbind(rep_len(n, N), matrix(0, N, 6))
+  Dx <- matrix(0, N, 7)
+  scans <- numeric(N)
+  for (i in 1:t) {
+    for (k in seq_len(m)) {
+      vec <- progress_step(slots[[k]], p, stay)
+      sym <- vec * sym_prob
+      Dx <- Dx + sym
+      slots[[k]] <- vec - sym
+    }
+    due <- slots[[m]]
+    att <- due * qv
+    us <- att * US_probs
+    Dx <- Dx + us
+    scans <- scans + rowSums(att)
+    new <- replicate(m, matrix(0, N, 7), simplify = FALSE)
+    new[[1]] <- att - us
+    for (k in seq_len(m - 1)) {
+      new[[k + 1]] <- slots[[k]]
+    }
+    new[[m]] <- new[[m]] + (due - att)
+    slots <- new
+  }
+  vec <- Reduce(`+`, slots)
+  colnames(Dx) <- colnames(vec) <- stage_list
+  list(dx = Dx, undiagnosed = vec, scans = scans)
+}
+
 #' One monthly step of the progression model on an N x 7 state matrix.
 #'
 #' Equivalent to `vec %*% transition_matrix(...)`, with terms added in the same
@@ -250,30 +333,88 @@ screen_cohort <- function(Pr_Att, ..., n = 100, t = 120, m = 6, params = params_
 
 # ----- Adherence-stratified detection model -----------------------------------
 
+#' Class shares and monthly attendance probabilities for adherence = "due".
+#'
+#' Requires every element of ADH_PI_NAMES and ADH_ATT_NAMES in `params` (never
+#' reads p_NA, p_CA or p_Att) and checks the shares sum to 1 (tolerance 1e-8).
+#'
+#' Ref: plan 2026-11-24 (paper 2); not in the publication.
+#'
+#' @param params  Named parameter list.
+#' @return list(pi = shares Low, Med, High; q = attendance probabilities).
+due_class_params <- function(params) {
+  miss <- setdiff(c(ADH_PI_NAMES, ADH_ATT_NAMES), names(params))
+  if (length(miss) > 0) {
+    stop("adherence = \"due\" requires parameter(s): ", paste(miss, collapse = ", "))
+  }
+  pi <- lapply(params[ADH_PI_NAMES], identity)
+  tot <- Reduce(`+`, pi)
+  if (any(abs(tot - 1) > 1e-8)) {
+    stop("Pi_Low + Pi_Med + Pi_High must equal 1 (tolerance 1e-8)")
+  }
+  list(pi = unname(pi), q = unname(params[ADH_ATT_NAMES]))
+}
+
 #' Vectorised adherence-stratified diagnoses: N parameter sets at once.
 #'
-#' Stacks the three adherence groups as 3N rows, runs `screen_cohort_mat()`
-#' once, then adds the groups in the order non- + partial + complete.
+#' Stacks the three adherence groups as 3N rows, runs the cohort engine once,
+#' then adds the groups in the order non- + partial + complete.
+#'
+#' `adherence = "scheduled"` (default, the publication) uses
+#' `screen_cohort_mat()` with attendance 0, `p_Att`, 1 per scheduled scan;
+#' `Pi_*`, `Att_*` and `init` are ignored (and not required).
+#' `adherence = "due"` (paper 2, not in the publication) uses
+#' `screen_cohort_due_mat()`: the groups attend each month while due with
+#' probability `Att_Low`, `Att_Med`, `Att_High`, with class shares `Pi_Low`,
+#' `Pi_Med`, `Pi_High` (sum 1); `p_NA`, `p_CA`, `p_Att` are not read. All six
+#' are required in `params` (error otherwise).
 #'
 #' Ref: Cumming 2024, Sec. 2.1 (p. 4: completely adherent, partially adherent
 #' and non-adherent cohorts), Table 3 (p_NA, p_CA, p_Att); Supplement
 #' Sec. 3.1 (Pr(partially adherent) = 1 - Pr(non-) - Pr(completely adherent)).
+#' "due": plan 2026-11-24 / not in the publication.
 #'
-#' @param params  Named parameter list; each element has length 1 or N.
-#' @param n       Cohort size (length 1 or N).
-#' @param t       Follow-up months.
-#' @param m       Ultrasound interval months.
+#' @param params     Named parameter list; each element has length 1 or N.
+#' @param n          Cohort size (length 1 or N).
+#' @param t          Follow-up months.
+#' @param m          Ultrasound interval months.
+#' @param adherence  "scheduled" or "due" (see above).
+#' @param init       "due" or "gap"; only used when `adherence = "due"`, see
+#'                   `screen_cohort_due_mat()`.
 #' @return N x 7 matrix (people diagnosed per stage), colnames `stage_list`.
-screen_by_adherence_mat <- function(params, n, t, m) {
+screen_by_adherence_mat <- function(
+  params,
+  n,
+  t,
+  m,
+  adherence = c("scheduled", "due"),
+  init = c("due", "gap")
+) {
+  adherence <- match.arg(adherence)
+  init <- match.arg(init)
+  due <- if (adherence == "due") due_class_params(params)
   N <- n_cohorts(params, n)
-  p_NA <- rep_len(params$p_NA, N)
-  p_CA <- rep_len(params$p_CA, N)
-  # Ref: Supplement Sec. 3.1 (p. 11, partially adherent = 1 - p_NA - p_CA)
-  n_grp <- c(n * p_NA, n * (1 - p_NA - p_CA), n * p_CA)
-  # Ref: Cumming 2024, Sec. 2.1 (attendance 0, p_Att and 1 per cohort)
-  att <- c(rep(0, N), rep_len(params$p_Att, N), rep(1, N))
+  if (adherence == "due") {
+    n_grp <- c(
+      n * rep_len(due$pi[[1]], N),
+      n * rep_len(due$pi[[2]], N),
+      n * rep_len(due$pi[[3]], N)
+    )
+  } else {
+    p_NA <- rep_len(params$p_NA, N)
+    p_CA <- rep_len(params$p_CA, N)
+    # Ref: Supplement Sec. 3.1 (p. 11, partially adherent = 1 - p_NA - p_CA)
+    n_grp <- c(n * p_NA, n * (1 - p_NA - p_CA), n * p_CA)
+  }
   stacked <- lapply(params, function(x) rep(rep_len(x, N), 3))
-  dx <- screen_cohort_mat(att, stacked, n_grp, t, m)$dx
+  if (adherence == "due") {
+    q <- c(rep_len(due$q[[1]], N), rep_len(due$q[[2]], N), rep_len(due$q[[3]], N))
+    dx <- screen_cohort_due_mat(q, stacked, n_grp, t, m, init)$dx
+  } else {
+    # Ref: Cumming 2024, Sec. 2.1 (attendance 0, p_Att and 1 per cohort)
+    att <- c(rep(0, N), rep_len(params$p_Att, N), rep(1, N))
+    dx <- screen_cohort_mat(att, stacked, n_grp, t, m)$dx
+  }
   rows <- split(seq_len(3 * N), rep(1:3, each = N))
   (dx[rows[[1]], , drop = FALSE] + dx[rows[[2]], , drop = FALSE]) +
     dx[rows[[3]], , drop = FALSE]
@@ -293,10 +434,25 @@ screen_by_adherence_mat <- function(params, n, t, m) {
 #' @param t       Follow-up months.
 #' @param m       Ultrasound interval months.
 #' @param params  Named parameter list (default `params_def`).
+#' @param adherence  "scheduled" (default) or "due"; see
+#'                `screen_by_adherence_mat()`. "due" needs `Pi_*` and `Att_*`
+#'                in `params` (or as overrides, which only work if `params`
+#'                contains them).
+#' @param init    "due" or "gap" (only for `adherence = "due"`).
 #' @return Tibble with one column per `stage_list` state (people diagnosed).
-screen_by_adherence <- function(..., n = 100, t = 120, m = 6, params = params_def) {
+screen_by_adherence <- function(
+  ...,
+  n = 100,
+  t = 120,
+  m = 6,
+  params = params_def,
+  adherence = c("scheduled", "due"),
+  init = c("due", "gap")
+) {
+  adherence <- match.arg(adherence)
+  init <- match.arg(init)
   params <- modify_params(params, list(...))
-  dx <- screen_by_adherence_mat(params, n, t, m)
+  dx <- screen_by_adherence_mat(params, n, t, m, adherence, init)
   as_tibble(dx, .name_repair = "minimal")
 }
 
@@ -315,9 +471,19 @@ screen_by_adherence <- function(..., n = 100, t = 120, m = 6, params = params_de
 #' @param n       Cohort size (length 1 or N).
 #' @param t       Follow-up months.
 #' @param m       Ultrasound interval months.
+#' @param adherence  "scheduled" (default) or "due"; see
+#'                `screen_by_adherence_mat()`.
+#' @param init    "due" or "gap" (only for `adherence = "due"`).
 #' @return Numeric vector of length N (life-years per cohort of n).
-life_add_vec <- function(params, n, t, m) {
-  dx <- screen_by_adherence_mat(params, n, t, m)
+life_add_vec <- function(
+  params,
+  n,
+  t,
+  m,
+  adherence = c("scheduled", "due"),
+  init = c("due", "gap")
+) {
+  dx <- screen_by_adherence_mat(params, n, t, m, match.arg(adherence), match.arg(init))
   # Ref: Cumming 2024, Sec. 2.1 (p. 5), Table 2 (L_X)
   Lmat <- cbind(0, param_matrix(params, STAGE_L_NAMES, nrow(dx)), 0)
   s <- 0
@@ -342,10 +508,21 @@ life_add_vec <- function(params, n, t, m) {
 #' @param t       Follow-up months.
 #' @param m       Ultrasound interval months.
 #' @param params  Named parameter list (default `params_def`).
+#' @param adherence  "scheduled" (default) or "due"; see
+#'                `screen_by_adherence_mat()`.
+#' @param init    "due" or "gap" (only for `adherence = "due"`).
 #' @return Scalar life-years gained per cohort of n.
-life_add <- function(..., n = 100, t = 120, m = 6, params = params_def) {
+life_add <- function(
+  ...,
+  n = 100,
+  t = 120,
+  m = 6,
+  params = params_def,
+  adherence = c("scheduled", "due"),
+  init = c("due", "gap")
+) {
   params <- modify_params(params, list(...))
-  life_add_vec(params, n, t, m)
+  life_add_vec(params, n, t, m, match.arg(adherence), match.arg(init))
 }
 
 
