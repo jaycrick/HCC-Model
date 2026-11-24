@@ -17,7 +17,7 @@ if command -v air >/dev/null 2>&1; then
   echo "air: formatted staged R files and re-staged." >&2
 else
   echo "WARNING: air not found — skipping R format check." >&2
-  echo "Install with: curl -fsSL https://github.com/posit-dev/air/releases/download/0.4.1/air-installer.sh | sh" >&2
+  echo "Install air 0.13.0: brew install air (macOS), or see https://posit-dev.github.io/air/" >&2
 fi
 
 # Lint ratchet: staged files may not have more lints than the baseline.

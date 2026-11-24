@@ -251,8 +251,11 @@ After cloning, activate the versioned git hooks and install the [air](https://gi
 ```bash
 git config core.hooksPath .githooks
 
-# Install air (if not already present)
-curl -fsSL https://github.com/posit-dev/air/releases/download/0.4.1/air-installer.sh | sh
+# Install air 0.13.0 (the version pinned in CI) if not already present.
+# macOS:
+brew install air
+# Other OSes: see https://posit-dev.github.io/air/ (install page) and install
+# version 0.13.0 so local formatting matches CI.
 ```
 
 ### What the hooks enforce
