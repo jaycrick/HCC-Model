@@ -250,6 +250,8 @@ After cloning, activate the versioned git hooks and install the [air](https://gi
 
 ```bash
 git config core.hooksPath .githooks
+# Make `git blame` skip bulk formatting commits (listed in .git-blame-ignore-revs).
+git config blame.ignoreRevsFile .git-blame-ignore-revs
 
 # Install air 0.13.0 (the version pinned in CI) if not already present.
 # macOS:

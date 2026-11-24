@@ -1,0 +1,6 @@
+# Bulk formatting commits for `git blame` to skip.
+# Enable locally once per clone: git config blame.ignoreRevsFile .git-blame-ignore-revs
+# (GitHub applies this file automatically.)
+
+# :cop: Reformat with air (persistent-line-breaks = false, width 88)
+d7ea1eb8e18c72cdfc5d4d4cbc9fd0df56803fee
