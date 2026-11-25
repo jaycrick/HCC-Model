@@ -33,6 +33,33 @@ gives the same results as before.
   tables `data/adherence_counts*.csv` (base plus three sensitivity variants,
   described in `data/README.md`), model comparison, sensitivity and goodness
   of fit tables in `output/`, and the bootstrap in `data-derived/`.
+- Base switched to the pre-COVID cohort (follow-up capped at 2020-03-01, as in
+  paper 1, before the expected-scans filter; N = 108, old cuts 34/37/37).
+  `adherence_counts.csv` is now that table; follow-up to the census is the
+  variant `adherence_counts_withcovid.csv`; diagscan, noshift and floor are
+  built on the pre-COVID base. `gap_counts.csv` describes the base. Count tables
+  gain the exposure column `T` (columns A, F, T, n; follow-up months after the
+  shift rule); `adherence_counts()` takes `T_exp` and `check_disclosure()`
+  requires A, F, T, n. The likelihood ignores T; the goodness of fit and the
+  parametric bootstrap use it. The golden fixture was regenerated for the new
+  table. Bootstrap, `Parameters.csv` and `Parameters_sources.csv` were rerun.
+- Fix `adherence_profile_ci()`: profile refits now respect Att_Low <= Att_Med <=
+  Att_High with the pinned value as a bound (new `adh_ordered_ll()`), because
+  unconstrained refits let the other classes swap labels and flattened the
+  profile. `edge()` now checks the refit at the MLE and takes the first crossing
+  on a grid. On the with-COVID table the Pi_Low lower limit moves from 0.249 to
+  0.351; the other limits are unchanged.
+- Model selection: `fit_adherence_k()` (K = 1..5 EM, optional zero lowest
+  class) and `adherence_criteria()` (AIC, AICc, BIC, ICL with n = people), a
+  parametric bootstrap LRT for Att_Low = 0 and diagnostics in
+  `01_fit_adherence.R`. Under the pre-COVID base Att_Low = 0 has the lower BIC
+  and is not rejected (boundary p = 0.14).
+- The chosen paper-2 adherence model is 3 classes with Att_Low fixed at 0
+  (preferred by BIC, AICc and ICL; boundary LRT p = 0.14, parametric bootstrap
+  p = 0.095). `Parameters.csv` has Att_Low = 0 (LOWER = UPPER = 0) and bootstrap
+  CIs refitted with Att_Low = 0; profile CIs cover the four free parameters.
+  The stored bootstrap records `fix` and is rerun if it differs. The free 3-class
+  model is a sensitivity row. See `papers/stochastic/README.md`.
 - Tests: `test-adherence.R`, `test-adherence-model.R`,
   `test-adherence-data.R` and `test-adherence-golden.R` (golden fit pinned in
   `fixtures/adherence_golden.rds`, made once by

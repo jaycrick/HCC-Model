@@ -48,7 +48,11 @@ test_that("loglik equals brute-force path likelihood", {
     list(scans = c(4, 11), hz = 18)
   )
   ex <- t(vapply(people, function(p) due_exposure(p$scans, p$hz), numeric(2)))
-  tab <- adherence_counts(ex[, "A"], ex[, "F"])
+  tab <- adherence_counts(
+    ex[, "A"],
+    ex[, "F"],
+    vapply(people, function(p) p$hz, numeric(1))
+  )
   brute <- sum(vapply(
     people,
     function(p) log(path_lik(adh_par, p$scans, p$hz)),
@@ -96,7 +100,7 @@ test_that("recovery on a simulated table, EM agrees with optim", {
   set.seed(20261124)
   ex <- sample(20:160, 10000, replace = TRUE)
   sim <- simulate_adherence_people(adh_par, ex)
-  tab <- adherence_counts(sim$A, sim$F)
+  tab <- adherence_counts(sim$A, sim$F, ex)
   e <- fit_adherence(tab, "em", n_starts = 4)
   o <- fit_adherence(tab, "optim", n_starts = 4)
   expect_equal(e$loglik, o$loglik, tolerance = 1e-6)
@@ -171,6 +175,88 @@ test_that("profile CI brackets the estimate and respects boundaries", {
   expect_lte(cs$upper, 1)
 })
 
+adh_tab_file <- function(name) {
+  read.csv(here::here("papers", "stochastic", "data", name))
+}
+
+test_that("profile CIs on the pre-COVID base table respect the ordering", {
+  tab <- adh_tab_file("adherence_counts.csv")
+  e <- fit_adherence(tab)
+  for (p in ADH_FREE_NAMES) {
+    ci <- adherence_profile_ci(e, tab, p)
+    expect_lte(ci$lower, ci$estimate + 1e-9)
+    expect_gte(ci$upper, ci$estimate - 1e-9)
+    for (lim in c(ci$lower, ci$upper)) {
+      if (lim > 1e-6 && lim < 1 - 1e-6) {
+        expect_equal(adh_profile_ll(e, tab, p, lim), ci$cutoff, tolerance = 1e-4)
+      }
+    }
+  }
+  # the profile clearly drops for Att_Med and Att_High: lower limit above 0
+  expect_gt(adherence_profile_ci(e, tab, "Att_Med")$lower, 0.01)
+  expect_gt(adherence_profile_ci(e, tab, "Att_High")$lower, 0.05)
+  expect_lt(adherence_profile_ci(e, tab, "Att_Med")$upper, 0.5)
+})
+
+test_that("profile CIs on the with-COVID table match the reported values", {
+  tab <- adh_tab_file("adherence_counts_withcovid.csv")
+  e <- fit_adherence(tab)
+  want <- list(
+    # Pi_Low lower was 0.249 before the ordering fix (label swap); now 0.351
+    Pi_Low = c(0.351, 0.555),
+    Pi_High = c(0.064, 0.317),
+    Att_Low = c(0.0053, 0.0160),
+    Att_Med = c(0.124, 0.211),
+    Att_High = c(0.329, 0.557)
+  )
+  for (p in names(want)) {
+    ci <- adherence_profile_ci(e, tab, p)
+    expect_lt(max(abs(c(ci$lower, ci$upper) - want[[p]])), 0.001)
+  }
+})
+
+test_that("profile CIs cover the truth in synthetic data", {
+  set.seed(11)
+  tr <- c(Pi_Low = 0.3, Pi_High = 0.4, Att_Low = 0.02, Att_Med = 0.15, Att_High = 0.5)
+  exposure <- sample(24:96, 600, replace = TRUE)
+  sim <- simulate_adherence_people(tr, exposure)
+  tab <- aggregate(n ~ A + F, data = transform(sim, n = 1), FUN = sum)
+  e <- fit_adherence(tab)
+  for (p in c("Att_Low", "Att_Med", "Att_High")) {
+    ci <- adherence_profile_ci(e, tab, p)
+    expect_true(tr[[p]] >= ci$lower - 1e-9 && tr[[p]] <= ci$upper + 1e-9, label = p)
+  }
+})
+
+test_that("the fit is identical with the T column and aggregated over T", {
+  tab <- adh_tab_file("adherence_counts.csv")
+  expect_true("T" %in% names(tab))
+  agg <- aggregate(n ~ A + F, data = tab, FUN = sum)
+  f1 <- fit_adherence(tab, n_starts = 6)
+  f2 <- fit_adherence(agg, n_starts = 6)
+  expect_equal(f1$loglik, f2$loglik, tolerance = 1e-9)
+  expect_equal(f1$par, f2$par, tolerance = 1e-6)
+})
+
+test_that("K-class fitter reproduces fit_adherence() at K = 3 and for zero_low", {
+  tab <- adh_tab_file("adherence_counts.csv")
+  f3 <- fit_adherence(tab)
+  k3 <- fit_adherence_k(tab, 3)
+  expect_equal(k3$loglik, f3$loglik, tolerance = 1e-7)
+  expect_equal(k3$q, unname(f3$par[ADH_ATT_NAMES]), tolerance = 1e-3)
+  f0 <- fit_adherence(tab, fix = list(Att_Low = 0))
+  k0 <- fit_adherence_k(tab, 3, zero_low = TRUE)
+  expect_equal(k0$loglik, f0$loglik, tolerance = 1e-7)
+  expect_equal(k3$df, 5)
+  expect_equal(k0$df, 4)
+  expect_equal(k3$n, 108)
+  cr <- adherence_criteria(k3, tab)
+  expect_equal(cr$BIC, -2 * k3$loglik + 5 * log(108))
+  expect_gte(cr$ICL, cr$BIC)
+  k1 <- fit_adherence_k(tab, 1)
+  expect_equal(k1$q, sum(tab$A * tab$n) / sum((tab$A + tab$F) * tab$n))
+})
+
 test_that("bootstrap helper draws counts that sum to N and fits run", {
   tab <- adh_tab()
   set.seed(3)
@@ -179,4 +265,27 @@ test_that("bootstrap helper draws counts that sum to N and fits run", {
   b <- adherence_bootstrap(tab, 2, list(n_starts = 3), cnt)
   expect_equal(dim(b), c(2, 7))
   expect_true(all(is.finite(b)))
+})
+
+test_that("profile CI and bootstrap pass `fix` through (Att_Low = 0)", {
+  tab <- adh_tab_file("adherence_counts.csv")
+  fx <- list(Att_Low = 0)
+  e <- fit_adherence(tab, fix = fx)
+  expect_equal(e$par[["Att_Low"]], 0)
+  expect_error(adherence_profile_ci(e, tab, "Att_Low", fix = fx), "fixed")
+  for (p in c("Pi_Low", "Pi_High", "Att_Med", "Att_High")) {
+    ci <- adherence_profile_ci(e, tab, p, fix = fx)
+    expect_lte(ci$lower, ci$estimate + 1e-9)
+    expect_gte(ci$upper, ci$estimate - 1e-9)
+    for (lim in c(ci$lower, ci$upper)) {
+      if (lim > 1e-6 && lim < 1 - 1e-6) {
+        v <- adh_fit_ll(tab, c(fx, setNames(lim, p)), list(e$par))
+        expect_lte(v, e$loglik + 1e-6)
+      }
+    }
+  }
+  set.seed(4)
+  cnt <- draw_bootstrap_counts(tab, 2)
+  b <- adherence_bootstrap(tab, 2, list(n_starts = 3, fix = fx), cnt)
+  expect_equal(unname(b[, "Att_Low"]), c(0, 0))
 })

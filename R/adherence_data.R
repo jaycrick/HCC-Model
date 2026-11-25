@@ -104,30 +104,35 @@ due_exposure <- function(us_months, end_month, m = 6) {
   c(A = n_att, F = n_due)
 }
 
-#' Aggregate per-person (A, F) into a count table.
+#' Aggregate per-person (A, F, T) into a count table.
+#'
+#' T is the person's follow-up in whole months after the shift rule (the
+#' end_month of regularise_us_months()); due_exposure(scans, T) gives (A, F).
 #'
 #' Ref: none (aggregation helper).
 #'
 #' @param A       Numeric vector: scans attended while due, per person.
 #' @param F_due   Numeric vector of equal length: due months without a scan.
-#' @return data.frame(A, F, n) sorted by A then F; n = people with that pair.
-adherence_counts <- function(A, F_due) {
-  stopifnot(length(A) == length(F_due))
-  tab <- as.data.frame(table(A = A, Fd = F_due), stringsAsFactors = FALSE)
+#' @param T_exp   Numeric vector of equal length: follow-up months.
+#' @return data.frame(A, F, T, n) sorted by A, F, T; n = people with that triple.
+adherence_counts <- function(A, F_due, T_exp) {
+  stopifnot(length(A) == length(F_due), length(A) == length(T_exp))
+  tab <- as.data.frame(table(A = A, Fd = F_due, Te = T_exp), stringsAsFactors = FALSE)
   tab <- tab[tab$Freq > 0, ]
   out <- data.frame(
     A = as.integer(tab$A),
     F = as.integer(tab$Fd),
+    T = as.integer(tab$Te),
     n = as.integer(tab$Freq)
   )
-  out <- out[order(out$A, out$F), ]
+  out <- out[order(out$A, out$F, out$T), ]
   rownames(out) <- NULL
   out
 }
 
 #' Check that a count table is safe to release.
 #'
-#' Stops unless the columns are exactly A, F, n and all values are
+#' Stops unless the columns are exactly A, F, T, n and all values are
 #' non-negative whole numbers. Reports the smallest cell and the cell count.
 #'
 #' Ref: none (disclosure safeguard).
@@ -135,7 +140,7 @@ adherence_counts <- function(A, F_due) {
 #' @param tab  Data frame to check.
 #' @return `tab`, invisibly.
 check_disclosure <- function(tab) {
-  stopifnot(identical(names(tab), c("A", "F", "n")))
+  stopifnot(identical(names(tab), c("A", "F", "T", "n")))
   ok <- vapply(
     tab,
     function(v) is.numeric(v) && all(!is.na(v) & v >= 0 & v == round(v)),

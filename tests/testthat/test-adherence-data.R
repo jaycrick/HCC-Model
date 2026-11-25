@@ -94,16 +94,20 @@ test_that("due_exposure rejects scans inside the refractory period", {
 })
 
 test_that("adherence_counts aggregates and sorts", {
-  tab <- adherence_counts(c(1, 0, 1, 1, 0), c(5, 9, 5, 2, 9))
-  expect_equal(names(tab), c("A", "F", "n"))
+  tab <- adherence_counts(c(1, 0, 1, 1, 0), c(5, 9, 5, 2, 9), c(12, 9, 12, 8, 9))
+  expect_equal(names(tab), c("A", "F", "T", "n"))
   expect_equal(tab$A, c(0, 1, 1))
   expect_equal(tab$F, c(9, 2, 5))
+  expect_equal(tab$T, c(9, 8, 12))
   expect_equal(tab$n, c(2, 1, 2))
   expect_equal(sum(tab$n), 5)
+  # same (A, F) with different T stays in separate cells
+  t2 <- adherence_counts(c(1, 1), c(5, 5), c(12, 14))
+  expect_equal(nrow(t2), 2)
 })
 
 test_that("check_disclosure accepts a clean table and rejects extras", {
-  tab <- adherence_counts(c(1, 0), c(5, 9))
+  tab <- adherence_counts(c(1, 0), c(5, 9), c(12, 9))
   expect_message(check_disclosure(tab), "min n = 1")
   expect_error(suppressMessages(check_disclosure(cbind(tab, id = 1:2))))
   expect_error(suppressMessages(check_disclosure(transform(tab, n = n + 0.5))))

@@ -11,26 +11,28 @@ The cleaning rules are implemented in `R/adherence_data.R` and unit-tested in
 
 | File | Contents |
 |------|----------|
-| `adherence_counts.csv` | Base analysis |
+| `adherence_counts.csv` | Base analysis: pre-COVID cohort, follow-up capped at 2020-03-01 |
+| `adherence_counts_withcovid.csv` | Sensitivity: follow-up to the 2022-03-18 census (no cap) |
 | `adherence_counts_diagscan.csv` | Sensitivity: count the diagnostic scan |
 | `adherence_counts_noshift.csv` | Sensitivity: no shift, ignore in-gap scans |
 | `adherence_counts_floor.csv` | Sensitivity: `floor()` month conversion |
-| `gap_counts.csv` | Gaps between consecutive scans before the shift rule (descriptive only) |
+| `gap_counts.csv` | Gaps between consecutive scans before the shift rule, base (pre-COVID) cohort (descriptive only) |
 
-Every `adherence_counts*` table has exactly the columns `A`, `F`, `n`, one row per distinct pair:
+Every `adherence_counts*` table has exactly the columns `A`, `F`, `T`, `n`, one row per distinct triple:
 
 - `A`: number of scans attended while due;
 - `F`: number of months due without a scan;
-- `n`: number of people with that pair.
+- `T`: the person's follow-up in whole months **after the shift rule** (the shifted end month; for `noshift`, the unshifted rounded end month). It is not calendar follow-up: merges and pushes move the end. `due_exposure(scans, T)` gives that person's (A, F), and `simulate_adherence_people(par, exposure_months = T)` is consistent with it. It satisfies 0 <= F <= T, and F + 6A exceeds T by 0 to 6 months (the not-due period after the last scan can run past the end);
+- `n`: number of people with that triple.
 
 `sum(n)` is the cohort size, N = 108.
-The table is a sufficient statistic for the likelihood
-(l = sum n log sum_c pi_c q_c^A (1 - q_c)^F), so it reproduces the fit exactly.
+The likelihood does not use `T`
+(l = sum n log sum_c pi_c q_c^A (1 - q_c)^F), so the table aggregated over `T` is a sufficient statistic and reproduces the fit exactly. `T` is used for simulation (posterior-predictive checks, parametric bootstrap).
 It holds no dates or identifiers.
 Single-person cells exist (minimum cell count 1) and are covered by the approval to release.
 
 `gap_counts.csv` (columns `gap_months`, `n`) counts the gaps between consecutive
-in-window scans, in whole months, **before** the shift rule (344 gaps, 108 people).
+in-window scans, in whole months, **before** the shift rule (236 gaps, 108 people).
 The start-to-first-scan interval is not a gap.
 Gaps of 0 to 12 months are always listed; longer gaps are listed only where present.
 The counts after the rule follow from it:
@@ -39,7 +41,7 @@ gaps of 0 to 2 months are merged away, gaps of 3 to 5 months become 6, and gaps 
 
 ## Cohort (aggregate CONSORT counts)
 
-The cohort follows the original attendance analysis (Cumming 2024, Supplement Sec. 3.1).
+The cohort follows the original attendance analysis (Cumming 2024, Supplement Sec. 3.1), with follow-up capped at 2020-03-01 as in paper 1 (see Dates).
 Rows (= people) after each step:
 
 | Step | Rows | Excluded |
@@ -49,11 +51,12 @@ Rows (= people) after each step:
 | SVR recorded as "No" | 196 | 19 |
 | Lost to follow-up | 152 | 44 |
 | HCC diagnosed before 2016-07-02 | 139 | 13 |
-| Fewer than 3 expected scans (see below) | 118 | 21 |
+| Fewer than 3 expected scans (see below; end capped at 2020-03-01) | 118 | 21 |
 | No scan history available (missing attendance rate) | 108 | 10 |
 
 Rows with a missing value in the screening variable are kept at the cirrhosis, SVR and lost-to-follow-up steps.
-Expected scans = floor((end - start) / 183 days); people with 2 or fewer are excluded.
+Expected scans = floor((end - start) / 183 days), with the capped end; people with 2 or fewer are excluded.
+The step counts are the same as for follow-up to the census (only the Exp_US step uses the capped end).
 
 ## Dates
 
@@ -61,6 +64,7 @@ Expected scans = floor((end - start) / 183 days); people with 2 or fewer are exc
   If neither exists, start = max(earliest scan - 183 days, 2016-07-01).
 - End = earliest of death (any source) and HCC diagnosis (any source).
   If neither, end = the census date, 2022-03-18 (or the registry consensus date if later).
+  The end is then capped at 2020-03-01, as in paper 1, **before** the expected-scans filter.
 - Scan window: scans strictly after the start and strictly before the end.
   Scans outside it (mostly before the start) are discarded.
 - Scan dates are sorted and de-duplicated within a person.
@@ -84,6 +88,9 @@ Expected scans = floor((end - start) / 183 days); people with 2 or fewer are exc
 
 ## Variants
 
+All variants except `withcovid` are built on the pre-COVID base cohort.
+
+- `withcovid`: no 2020-03-01 cap; follow-up runs to the census (the cohort is rebuilt on that end date). Its (A, F) content, aggregated over `T`, equals the base table used before the switch to pre-COVID.
 - `diagscan`: when follow-up ends at an HCC diagnosis, a scan on the diagnosis date is also counted (window `u <= end`).
   A tie between death and diagnosis is treated as an HCC end.
 - `noshift`: no shift rule. Scans are converted to integer months, then a scan less than 6 months after the previous kept scan is ignored: it neither counts nor resets the clock (`drop_in_gap`), and the end is not moved.
